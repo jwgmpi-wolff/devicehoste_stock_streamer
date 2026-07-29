@@ -1,0 +1,16 @@
+# Keystore credentials — never commit
+keystore.properties
+app/stockstream-release.keystore
+
+# Gradle
+.gradle/
+.kotlin/
+build/
+app/build/
+
+# IDE
+.idea/
+*.iml
+
+# Local Android SDK path
+local.properties

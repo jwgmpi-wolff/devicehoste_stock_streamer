@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">android_stock_tracker</string>
+
+    <!-- Lock screen -->
+    <string name="lock_enter_pin">Enter PIN</string>
+    <string name="lock_unlock_biometric">Unlock with biometric</string>
+    <string name="lock_incorrect_pin">Incorrect PIN. Try again.</string>
+    <string name="lock_set_pin">Set App PIN</string>
+    <string name="lock_confirm_pin">Confirm PIN</string>
+    <string name="lock_pin_mismatch">PINs do not match. Try again.</string>
+    <string name="lock_biometric_prompt_title">Biometric Unlock</string>
+    <string name="lock_biometric_prompt_subtitle">Use your biometric to unlock StockStream Local</string>
+    <string name="lock_biometric_prompt_cancel">Use PIN</string>
+
+    <!-- Data source labels -->
+    <string name="source_live">LIVE</string>
+    <string name="source_delayed">DELAYED</string>
+    <string name="source_stale">STALE</string>
+    <string name="source_cached">CACHED</string>
+    <string name="source_imported">IMPORTED</string>
+    <string name="source_calculated">CALCULATED</string>
+    <string name="source_not_provided">NOT PROVIDED</string>
+    <string name="source_unavailable">UNAVAILABLE</string>
+    <string name="source_unsupported">UNSUPPORTED</string>
+
+    <!-- Status messages -->
+    <string name="status_offline">Device offline — live quotes unavailable</string>
+    <string name="status_provider_not_configured">Market data provider not configured. Go to Settings → Provider.</string>
+    <string name="status_provider_throttled">Provider rate limit reached. Waiting to retry.</string>
+    <string name="status_market_closed">Market closed</string>
+    <string name="status_market_open">Market open</string>
+    <string name="status_no_live_data">Live data unavailable</string>
+    <string name="status_unsupported_by_provider">Unsupported by provider</string>
+
+    <!-- CSV import -->
+    <string name="csv_import_title">Import Portfolio CSV</string>
+    <string name="csv_import_select_file">Select Fidelity CSV file</string>
+    <string name="csv_import_success">Import complete</string>
+    <string name="csv_import_error_header">Missing required columns</string>
+    <string name="csv_import_note">Imported values are baseline only — not live market data.</string>
+
+    <!-- General -->
+    <string name="add_ticker">Add Ticker</string>
+    <string name="remove_ticker">Remove Ticker</string>
+    <string name="settings">Settings</string>
+    <string name="refresh_now">Refresh Now</string>
+    <string name="last_refreshed">Last refreshed: %1$s</string>
+    <string name="never_refreshed">Never refreshed</string>
+    <string name="loading">Loading…</string>
+    <string name="error_generic">An error occurred: %1$s</string>
+    <string name="local_only_notice">All data is stored locally on this device. No cloud services are used.</string>
+    <string name="api_key_warning">⚠ API keys stored on a mobile device can potentially be extracted. See docs/provider-setup.md for details.</string>
+</resources>

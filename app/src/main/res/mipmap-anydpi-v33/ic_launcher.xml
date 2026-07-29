@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="192dp"
+    android:height="192dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+    <!-- Background -->
+    <path android:fillColor="#1B5E20" android:pathData="M0,0h192v192h-192z" />
+
+    <!-- Left ear -->
+    <path android:fillColor="#8B7355" android:pathData="M45,50 L50,30 L55,50 Z" />
+    <!-- Right ear -->
+    <path android:fillColor="#8B7355" android:pathData="M137,50 L142,30 L147,50 Z" />
+
+    <!-- Wolf head main -->
+    <path android:fillColor="#A0826D" android:pathData="M51,45 Q60,40 96,40 Q132,40 141,45 Q150,55 150,95 Q150,135 120,150 Q96,160 72,150 Q42,135 42,95 Q42,55 51,45 Z" />
+
+    <!-- Left snout side -->
+    <path android:fillColor="#A0826D" android:pathData="M50,70 Q40,85 42,105 Q50,115 65,115 Q70,100 65,75 Z" />
+    <!-- Right snout side -->
+    <path android:fillColor="#A0826D" android:pathData="M142,70 Q152,85 150,105 Q142,115 127,115 Q122,100 127,75 Z" />
+
+    <!-- Snout face -->
+    <path android:fillColor="#C9B8A8" android:pathData="M68,95 Q68,80 96,75 Q124,80 124,95 Q124,120 96,128 Q68,120 68,95 Z" />
+
+    <!-- Left eye background -->
+    <path android:fillColor="#FFFFFF" android:pathData="M69,75 Q75,71 81,75 Q75,81 69,75 Z" />
+    <!-- Left eye pupil -->
+    <path android:fillColor="#000000" android:pathData="M76,78 Q78,76 80,78 Q78,80 76,78 Z" />
+
+    <!-- Right eye background -->
+    <path android:fillColor="#FFFFFF" android:pathData="M111,75 Q117,71 123,75 Q117,81 111,75 Z" />
+    <!-- Right eye pupil -->
+    <path android:fillColor="#000000" android:pathData="M112,78 Q114,76 116,78 Q114,80 112,78 Z" />
+
+    <!-- Nose -->
+    <path android:fillColor="#5C4A42" android:pathData="M92,103 Q96,100 100,103 Q96,107 92,103 Z" />
+
+    <!-- Mouth line -->
+    <path android:strokeColor="#5C4A42" android:strokeWidth="2" android:pathData="M96,105 L96,120" />
+
+    <!-- Left $ symbol - vertical line -->
+    <path android:strokeColor="#FFD700" android:strokeWidth="2.5" android:pathData="M15,75 L15,110" />
+    <!-- Left $ - top curve -->
+    <path android:strokeColor="#FFD700" android:strokeWidth="2.5" android:pathData="M10,80 Q15,77 20,80" />
+    <!-- Left $ - bottom curve -->
+    <path android:strokeColor="#FFD700" android:strokeWidth="2.5" android:pathData="M10,105 Q15,108 20,105" />
+
+    <!-- Right $ symbol - vertical line -->
+    <path android:strokeColor="#FFD700" android:strokeWidth="2.5" android:pathData="M177,75 L177,110" />
+    <!-- Right $ - top curve -->
+    <path android:strokeColor="#FFD700" android:strokeWidth="2.5" android:pathData="M172,80 Q177,77 182,80" />
+    <!-- Right $ - bottom curve -->
+    <path android:strokeColor="#FFD700" android:strokeWidth="2.5" android:pathData="M172,105 Q177,108 182,105" />
+</vector>
