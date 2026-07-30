@@ -46,6 +46,58 @@ The Gradle wrapper downloads Gradle 8.11.1 automatically.
 
 ## Configure
 
+### Choose a market-data provider
+
+StockStream Local supports one provider at a time. The API key is sent directly from the
+Android device to that provider and is stored locally using Android Keystore-backed encrypted
+preferences.
+
+| Provider | Best choice for | Live-update behavior in this app | Important limits |
+| --- | --- | --- | --- |
+| [Finnhub](https://finnhub.io/) | US stocks, streaming prices, company profiles, and recent company news | Uses Finnhub's WebSocket trade stream for US-stock last-price updates and REST for complete quote refreshes | Free company news and basic company profiles are available. Daily OHLCV/volume, bid/ask, detailed ETF data, and mutual-fund profiles may require a paid plan. Mutual funds such as `FSELX` may have limited quote/detail coverage. Finnhub permits one WebSocket connection per API key. |
+| [Alpha Vantage](https://www.alphavantage.co/) | Polling quotes and broader stock/fund symbol lookup | Polls `GLOBAL_QUOTE`; it does not use a WebSocket | The free service allows up to 25 requests per day. Alpha Vantage states that real-time and 15-minute-delayed US market data require a premium entitlement, so free-plan values should not be treated as streaming exchange data. |
+
+Choose **Finnhub** when immediate US-stock price movement is the priority. Choose
+**Alpha Vantage** when tracking funds or using polling is more important. Provider coverage and
+entitlements can change, and the app displays unavailable fields rather than inventing values.
+
+### Get a provider key
+
+#### Finnhub
+
+1. Create a personal account on the [Finnhub registration page](https://finnhub.io/register).
+2. Open the [Finnhub dashboard](https://finnhub.io/dashboard) and copy the API key shown there.
+3. Review the [Finnhub API documentation and current plan limits](https://finnhub.io/docs/api).
+
+Finnhub documents real-time trade streaming for US stocks. Exchange coverage, professional use,
+historical volume, mutual-fund details, and other premium datasets depend on the selected Finnhub
+plan and its terms.
+
+#### Alpha Vantage
+
+1. Request a key from the [Alpha Vantage API key page](https://www.alphavantage.co/support/#api-key).
+2. Select the description that fits your use, provide an email address, and copy the issued key.
+3. Review the [Alpha Vantage API documentation](https://www.alphavantage.co/documentation/) and
+    [premium real-time data options](https://www.alphavantage.co/premium/).
+
+The free Alpha Vantage key is suitable for light polling and development. A paid entitlement is
+required when licensed real-time or 15-minute-delayed US market data is needed.
+
+### Enter the key in the app
+
+1. Open **Settings** from the Home screen.
+2. Open **Provider Settings**.
+3. Select **Finnhub (Free Real-time)** or **Alpha Vantage**.
+4. Paste the matching provider API key into **API Key**, then select **Save**.
+5. Return Home and use **Refresh now**. For Finnhub, keep the app in the foreground to receive
+    WebSocket price updates.
+
+Do not paste a brokerage password, brokerage token, or a key from a different provider. To switch
+providers, repeat these steps with the new provider and its matching key. Use **Clear Provider
+Config** to remove the saved provider credentials from the device.
+
+### Local debug-key option
+
 Create or update the ignored `local.properties` file:
 
 ```properties
@@ -54,6 +106,9 @@ provider.apiKey=YOUR_LOCAL_DEBUG_PROVIDER_KEY
 ```
 
 The debug build may use `provider.apiKey` as a local default. A key entered in Provider Settings is encrypted and takes precedence. Release and GitHub-built APKs never embed this local key.
+
+The `local.properties` option is intended only for developer-owned debug builds. Never commit API
+keys, add them to `README.md`, or include them in screenshots, logs, issue reports, or release APKs.
 
 ## Build and test
 
@@ -85,6 +140,8 @@ For multiple devices or a nonstandard Platform-Tools location:
 ```
 
 The script validates ADB authorization, builds and installs the debug variant, and launches the main activity.
+After a successful build, it also copies a versioned APK and `StockStreamLocal-debug.apk` to
+`%USERPROFILE%\OneDrive\Apps`. Pass `-ApkArchivePath` to use a different synchronized folder.
 
 ## Deploy to Azure
 

@@ -1,6 +1,7 @@
 package com.wolffentp.stockstreamlocal.market.provider
 
 import com.wolffentp.stockstreamlocal.market.model.QuoteResult
+import com.wolffentp.stockstreamlocal.market.model.SecurityDetails
 import com.wolffentp.stockstreamlocal.market.model.SymbolValidationResult
 import com.wolffentp.stockstreamlocal.market.model.MarketStatusResult
 import com.wolffentp.stockstreamlocal.security.SecureStorage
@@ -72,6 +73,13 @@ class NullMarketDataProvider : MarketDataProvider {
 
     override suspend fun getQuotes(symbols: List<String>): List<QuoteResult> =
         symbols.map { QuoteResult.notConfigured(it) }
+
+    override suspend fun getSecurityDetails(symbol: String): SecurityDetails =
+        SecurityDetails(
+            symbol = symbol,
+            providerName = capabilities.providerName,
+            warning = "Configure a market data provider to load details and news.",
+        )
 
     override suspend fun getMarketStatus(symbol: String): MarketStatusResult =
         MarketStatusResult.NotSupported

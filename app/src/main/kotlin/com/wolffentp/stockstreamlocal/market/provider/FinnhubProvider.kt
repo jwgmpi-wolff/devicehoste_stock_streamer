@@ -5,7 +5,9 @@ import com.wolffentp.stockstreamlocal.market.model.DataSourceLabel
 import com.wolffentp.stockstreamlocal.market.model.FreshnessStatus
 import com.wolffentp.stockstreamlocal.market.model.MarketStatus
 import com.wolffentp.stockstreamlocal.market.model.MarketStatusResult
+import com.wolffentp.stockstreamlocal.market.model.NewsArticle
 import com.wolffentp.stockstreamlocal.market.model.QuoteResult
+import com.wolffentp.stockstreamlocal.market.model.SecurityDetails
 import com.wolffentp.stockstreamlocal.market.model.SymbolValidationResult
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -13,7 +15,9 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
+import java.time.LocalDate
 import java.time.Instant
+import java.time.ZoneOffset
 import java.util.concurrent.TimeUnit
 
 private const val TAG = "FinnhubProvider"
@@ -66,8 +70,9 @@ class FinnhubProvider(
                 else -> {
                     val match = response.result.firstOrNull {
                         it.symbol.equals(symbol.trim(), ignoreCase = true)
-                    } ?: response.result.first()
-                    SymbolValidationResult.Valid(symbol = match.symbol, name = match.description)
+                    }
+                    if (match == null) SymbolValidationResult.Invalid(symbol, "Exact symbol not found")
+                    else SymbolValidationResult.Valid(symbol = match.symbol, name = match.description)
                 }
             }
         } catch (e: IOException) {
@@ -84,7 +89,14 @@ class FinnhubProvider(
         val url = "$BASE_URL/quote?symbol=${symbol.trim()}&token=$apiKey"
         return try {
             val responseBody = executeGet(url)
-            parseQuoteResponse(symbol, responseBody)
+            val quote = parseQuoteResponse(symbol, responseBody)
+            if (quote.last == null) quote else {
+                val volume = fetchLatestDailyVolume(symbol)
+                quote.copy(
+                    volume = volume,
+                    volumeLabel = if (volume != null) DataSourceLabel.LIVE else DataSourceLabel.UNAVAILABLE,
+                )
+            }
         } catch (e: IOException) {
             Log.w(TAG, "Quote fetch network error")
             QuoteResult.error(symbol, PROVIDER_NAME, "Network error: ${e.message}")
@@ -101,6 +113,57 @@ class FinnhubProvider(
             kotlinx.coroutines.delay(1100)
             result
         }
+    }
+
+    override suspend fun getSecurityDetails(symbol: String): SecurityDetails {
+        if (apiKey.isBlank()) {
+            return SecurityDetails(symbol, providerName = PROVIDER_NAME, warning = "Provider is not configured.")
+        }
+        val normalized = symbol.trim().uppercase()
+        var profile: FinnhubProfile? = null
+        var news = emptyList<NewsArticle>()
+        val warnings = mutableListOf<String>()
+
+        try {
+            profile = json.decodeFromString<FinnhubProfile>(
+                executeGet("$BASE_URL/stock/profile2?symbol=$normalized&token=$apiKey"),
+            )
+        } catch (e: Exception) {
+            warnings += "Company or fund profile is unavailable."
+        }
+
+        try {
+            val today = LocalDate.now(ZoneOffset.UTC)
+            val from = today.minusDays(14)
+            news = json.decodeFromString<List<FinnhubNewsArticle>>(
+                executeGet("$BASE_URL/company-news?symbol=$normalized&from=$from&to=$today&token=$apiKey"),
+            ).mapNotNull { article ->
+                val headline = article.headline.trim()
+                val url = article.url.trim()
+                if (headline.isBlank() || url.isBlank()) null else NewsArticle(
+                    headline = headline,
+                    summary = article.summary.takeIf { it.isNotBlank() },
+                    source = article.source.takeIf { it.isNotBlank() },
+                    url = url,
+                    publishedAtUtc = article.datetime.takeIf { it > 0 }?.let(Instant::ofEpochSecond),
+                )
+            }.sortedByDescending { it.publishedAtUtc }.take(10)
+        } catch (e: Exception) {
+            warnings += "Recent news is unavailable."
+        }
+
+        return SecurityDetails(
+            symbol = normalized,
+            name = profile?.name?.takeIf { it.isNotBlank() },
+            assetType = profile?.finnhubIndustry?.takeIf { it.isNotBlank() }?.let { "Equity" },
+            exchange = profile?.exchange?.takeIf { it.isNotBlank() },
+            industry = profile?.finnhubIndustry?.takeIf { it.isNotBlank() },
+            marketCapitalization = profile?.marketCapitalization?.takeIf { it > 0 },
+            websiteUrl = profile?.weburl?.takeIf { it.isNotBlank() },
+            news = news,
+            providerName = PROVIDER_NAME,
+            warning = warnings.takeIf { it.isNotEmpty() }?.joinToString(" "),
+        )
     }
 
     override suspend fun getMarketStatus(symbol: String): MarketStatusResult {
@@ -120,6 +183,19 @@ class FinnhubProvider(
         }
     }
 
+    private fun fetchLatestDailyVolume(symbol: String): Long? {
+        return try {
+            val to = Instant.now().epochSecond
+            val from = to - TimeUnit.DAYS.toSeconds(7)
+            val body = executeGet("$BASE_URL/stock/candle?symbol=${symbol.trim()}&resolution=D&from=$from&to=$to&token=$apiKey")
+            val response = json.decodeFromString<FinnhubCandleResponse>(body)
+            response.volume?.lastOrNull()?.takeIf { it > 0 }
+        } catch (e: Exception) {
+            Log.w(TAG, "Daily volume unavailable")
+            null
+        }
+    }
+
     private fun parseQuoteResponse(symbol: String, body: String): QuoteResult {
         val response = json.decodeFromString<FinnhubQuoteResponse>(body)
 
@@ -135,7 +211,6 @@ class FinnhubProvider(
         val high = response.h
         val low = response.l
         val open = response.o
-        val volume = response.v
 
         val isLive = response.t != null // timestamp present = live quote
         val freshness = if (isLive) FreshnessStatus.LIVE else FreshnessStatus.DELAYED
@@ -168,8 +243,8 @@ class FinnhubProvider(
             pctTdyGainLoss = if (pctChg != 0.0) pctChg else null,
             pctTdyGainLossLabel = if (pctChg != 0.0) DataSourceLabel.LIVE else DataSourceLabel.UNAVAILABLE,
 
-            volume = if (volume > 0) volume else null,
-            volumeLabel = if (volume > 0) DataSourceLabel.LIVE else DataSourceLabel.UNAVAILABLE,
+            volume = null,
+            volumeLabel = DataSourceLabel.UNAVAILABLE,
 
             dayRangeLow = if (low > 0) low else null,
             dayRangeHigh = if (high > 0) high else null,
@@ -209,9 +284,31 @@ private data class FinnhubQuoteResponse(
     @SerialName("d") val d: Double = 0.0,           // change
     @SerialName("dp") val dp: Double = 0.0,         // change percent
     @SerialName("t") val t: Long? = null,           // timestamp (null if delayed)
-    @SerialName("v") val v: Long = 0,               // volume
-    @SerialName("bid") val bp: Double? = null,      // bid price
-    @SerialName("ask") val ap: Double? = null,      // ask price
+    @SerialName("bid") val bp: Double? = null,      // retained for provider plan variants
+    @SerialName("ask") val ap: Double? = null,      // retained for provider plan variants
+)
+
+@Serializable
+private data class FinnhubCandleResponse(
+    @SerialName("v") val volume: List<Long>? = null,
+)
+
+@Serializable
+private data class FinnhubProfile(
+    val name: String = "",
+    val exchange: String = "",
+    val weburl: String = "",
+    val marketCapitalization: Double? = null,
+    val finnhubIndustry: String = "",
+)
+
+@Serializable
+private data class FinnhubNewsArticle(
+    val datetime: Long = 0,
+    val headline: String = "",
+    val source: String = "",
+    val summary: String = "",
+    val url: String = "",
 )
 
 @Serializable

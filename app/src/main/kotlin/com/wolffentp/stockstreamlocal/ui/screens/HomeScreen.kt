@@ -17,9 +17,11 @@ import com.wolffentp.stockstreamlocal.columns.AllColumns
 import com.wolffentp.stockstreamlocal.market.provider.RefreshState
 import com.wolffentp.stockstreamlocal.ui.components.AddHoldingsDialog
 import com.wolffentp.stockstreamlocal.ui.components.QuoteRow
+import com.wolffentp.stockstreamlocal.ui.components.SecurityDetailDialog
 import com.wolffentp.stockstreamlocal.ui.components.StatusBanner
 import com.wolffentp.stockstreamlocal.ui.viewmodel.QuoteViewModel
 import com.wolffentp.stockstreamlocal.ui.viewmodel.RotatingViewViewModel
+import com.wolffentp.stockstreamlocal.ui.viewmodel.SecurityDetailState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +40,7 @@ fun HomeScreen(
     val sortAscending by quoteVm.sortAscending.collectAsStateWithLifecycle()
     val refreshState by quoteVm.refreshState.collectAsStateWithLifecycle()
     val isOnline by quoteVm.isOnline.collectAsStateWithLifecycle()
+    val detailState by quoteVm.detailState.collectAsStateWithLifecycle()
     val currentView by rotationVm.currentView.collectAsStateWithLifecycle()
     val views by rotationVm.views.collectAsStateWithLifecycle()
     val currentIndex by rotationVm.currentIndex.collectAsStateWithLifecycle()
@@ -179,7 +182,7 @@ fun HomeScreen(
                             QuoteRow(
                                 quote = quote,
                                 visibleColumns = visibleColumns,
-                                onClick = {},
+                                onClick = { quoteVm.showSecurityDetails(quote.symbol) },
                                 modifier = Modifier.weight(1f),
                             )
                             IconButton(
@@ -204,6 +207,21 @@ fun HomeScreen(
                 quoteVm.addHolding(symbol, qty, price)
             },
             onDismiss = { showAddHoldingsDialog = null },
+        )
+    }
+
+    if (detailState !is SecurityDetailState.Closed) {
+        val detailSymbol = when (val state = detailState) {
+            is SecurityDetailState.Loading -> state.symbol
+            is SecurityDetailState.Loaded -> state.details.symbol
+            is SecurityDetailState.Error -> state.symbol
+            SecurityDetailState.Closed -> ""
+        }
+        SecurityDetailDialog(
+            state = detailState,
+            quote = quotes[detailSymbol],
+            onDismiss = quoteVm::closeSecurityDetails,
+            onRetry = quoteVm::showSecurityDetails,
         )
     }
 }

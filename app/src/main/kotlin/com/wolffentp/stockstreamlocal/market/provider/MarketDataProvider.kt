@@ -2,6 +2,7 @@ package com.wolffentp.stockstreamlocal.market.provider
 
 import com.wolffentp.stockstreamlocal.market.model.MarketStatusResult
 import com.wolffentp.stockstreamlocal.market.model.QuoteResult
+import com.wolffentp.stockstreamlocal.market.model.SecurityDetails
 import com.wolffentp.stockstreamlocal.market.model.SymbolValidationResult
 
 /**
@@ -39,6 +40,9 @@ interface MarketDataProvider {
      * Implementations should respect rate limits between calls.
      */
     suspend fun getQuotes(symbols: List<String>): List<QuoteResult>
+
+    /** Fetch provider-verified profile fields and recent news for a stock or fund. */
+    suspend fun getSecurityDetails(symbol: String): SecurityDetails
 
     /**
      * Return current market status for the given symbol's exchange.

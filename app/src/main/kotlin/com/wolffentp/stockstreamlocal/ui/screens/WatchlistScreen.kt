@@ -1,5 +1,6 @@
 package com.wolffentp.stockstreamlocal.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,6 +14,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wolffentp.stockstreamlocal.data.model.TickerEntity
+import com.wolffentp.stockstreamlocal.ui.components.SecurityDetailDialog
+import com.wolffentp.stockstreamlocal.ui.viewmodel.QuoteViewModel
+import com.wolffentp.stockstreamlocal.ui.viewmodel.SecurityDetailState
 import com.wolffentp.stockstreamlocal.ui.viewmodel.WatchlistViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,8 +26,11 @@ fun WatchlistScreen(
     onTickerDetail: (String) -> Unit,
     onNavigateBack: () -> Unit,
     viewModel: WatchlistViewModel = hiltViewModel(),
+    quoteViewModel: QuoteViewModel = hiltViewModel(),
 ) {
     val watchlist by viewModel.watchlist.collectAsStateWithLifecycle()
+    val quotes by quoteViewModel.quotes.collectAsStateWithLifecycle()
+    val detailState by quoteViewModel.detailState.collectAsStateWithLifecycle()
     var showDeleteDialog by remember { mutableStateOf<TickerEntity?>(null) }
 
     Scaffold(
@@ -67,7 +74,7 @@ fun WatchlistScreen(
                                 }
                             }
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().clickable { quoteViewModel.showSecurityDetails(ticker.symbol) },
                     )
                     HorizontalDivider(thickness = 0.5.dp)
                 }
@@ -87,6 +94,21 @@ fun WatchlistScreen(
                 ) { Text("Remove") }
             },
             dismissButton = { TextButton(onClick = { showDeleteDialog = null }) { Text("Cancel") } },
+        )
+    }
+
+    if (detailState !is SecurityDetailState.Closed) {
+        val detailSymbol = when (val state = detailState) {
+            is SecurityDetailState.Loading -> state.symbol
+            is SecurityDetailState.Loaded -> state.details.symbol
+            is SecurityDetailState.Error -> state.symbol
+            SecurityDetailState.Closed -> ""
+        }
+        SecurityDetailDialog(
+            state = detailState,
+            quote = quotes[detailSymbol],
+            onDismiss = quoteViewModel::closeSecurityDetails,
+            onRetry = quoteViewModel::showSecurityDetails,
         )
     }
 }

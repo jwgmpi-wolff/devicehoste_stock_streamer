@@ -5,7 +5,9 @@ import com.wolffentp.stockstreamlocal.market.model.DataSourceLabel
 import com.wolffentp.stockstreamlocal.market.model.FreshnessStatus
 import com.wolffentp.stockstreamlocal.market.model.MarketStatus
 import com.wolffentp.stockstreamlocal.market.model.MarketStatusResult
+import com.wolffentp.stockstreamlocal.market.model.NewsArticle
 import com.wolffentp.stockstreamlocal.market.model.QuoteResult
+import com.wolffentp.stockstreamlocal.market.model.SecurityDetails
 import com.wolffentp.stockstreamlocal.market.model.SymbolValidationResult
 import com.wolffentp.stockstreamlocal.util.LogRedactor
 import kotlinx.serialization.SerialName
@@ -17,8 +19,11 @@ import java.io.IOException
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalTime
+import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 private const val TAG = "AlphaVantageProvider"
@@ -78,8 +83,9 @@ class AlphaVantageProvider(
                 else -> {
                     val match = response.bestMatches.firstOrNull {
                         it.symbol.equals(symbol.trim(), ignoreCase = true)
-                    } ?: response.bestMatches.first()
-                    SymbolValidationResult.Valid(symbol = match.symbol, name = match.name)
+                    }
+                    if (match == null) SymbolValidationResult.Invalid(symbol, "Exact symbol not found")
+                    else SymbolValidationResult.Valid(symbol = match.symbol, name = match.name)
                 }
             }
         } catch (e: IOException) {
@@ -115,6 +121,64 @@ class AlphaVantageProvider(
         }
     }
 
+    override suspend fun getSecurityDetails(symbol: String): SecurityDetails {
+        if (apiKey.isBlank()) {
+            return SecurityDetails(symbol, providerName = PROVIDER_NAME, warning = "Provider is not configured.")
+        }
+        val normalized = symbol.trim().uppercase()
+        var overview: AlphaVantageOverview? = null
+        var news = emptyList<NewsArticle>()
+        val warnings = mutableListOf<String>()
+
+        try {
+            val body = executeGet("$BASE_URL?function=OVERVIEW&symbol=$normalized&apikey=$apiKey")
+            overview = json.decodeFromString<AlphaVantageOverview>(body)
+            if (overview.symbol.isBlank()) {
+                overview = null
+                warnings += "Company or fund profile is unavailable."
+            }
+        } catch (e: Exception) {
+            warnings += "Company or fund profile is unavailable."
+        }
+
+        try {
+            val response = json.decodeFromString<AlphaVantageNewsResponse>(
+                executeGet("$BASE_URL?function=NEWS_SENTIMENT&tickers=$normalized&limit=10&apikey=$apiKey"),
+            )
+            if (response.information != null || response.note != null) {
+                warnings += "Recent news is unavailable."
+            } else {
+                news = response.feed.orEmpty().mapNotNull { article ->
+                    val headline = article.title.trim()
+                    val url = article.url.trim()
+                    if (headline.isBlank() || url.isBlank()) null else NewsArticle(
+                        headline = headline,
+                        summary = article.summary.takeIf { it.isNotBlank() },
+                        source = article.source.takeIf { it.isNotBlank() },
+                        url = url,
+                        publishedAtUtc = parseNewsTimestamp(article.timePublished),
+                    )
+                }.sortedByDescending { it.publishedAtUtc }.take(10)
+            }
+        } catch (e: Exception) {
+            warnings += "Recent news is unavailable."
+        }
+
+        return SecurityDetails(
+            symbol = normalized,
+            name = overview?.name?.takeIf { it.isNotBlank() },
+            assetType = overview?.assetType?.takeIf { it.isNotBlank() },
+            exchange = overview?.exchange?.takeIf { it.isNotBlank() },
+            industry = overview?.industry?.takeIf { it.isNotBlank() },
+            description = overview?.description?.takeIf { it.isNotBlank() },
+            marketCapitalization = overview?.marketCapitalization?.toDoubleOrNull(),
+            websiteUrl = overview?.officialSite?.takeIf { it.isNotBlank() },
+            news = news,
+            providerName = PROVIDER_NAME,
+            warning = warnings.takeIf { it.isNotEmpty() }?.distinct()?.joinToString(" "),
+        )
+    }
+
     override suspend fun getMarketStatus(symbol: String): MarketStatusResult {
         // AlphaVantage does not provide a direct market-status endpoint on the free tier.
         // We infer US market status from wall-clock time in Eastern Time.
@@ -131,6 +195,12 @@ class AlphaVantageProvider(
             }
             return response.body?.string() ?: throw IOException("Empty response body")
         }
+    }
+
+    private fun parseNewsTimestamp(value: String): Instant? = try {
+        LocalDateTime.parse(value, NEWS_TIME_FORMAT).toInstant(ZoneOffset.UTC)
+    } catch (e: Exception) {
+        null
     }
 
     private fun parseGlobalQuoteResponse(symbol: String, body: String): QuoteResult {
@@ -239,6 +309,7 @@ class AlphaVantageProvider(
 
     companion object {
         const val PROVIDER_NAME = "AlphaVantage"
+        private val NEWS_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss")
 
         private fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -285,4 +356,32 @@ private data class AlphaVantageSearchMatch(
     @SerialName("3. type") val type: String = "",
     @SerialName("4. region") val region: String = "",
     @SerialName("9. matchScore") val matchScore: String = "",
+)
+
+@Serializable
+private data class AlphaVantageOverview(
+    @SerialName("Symbol") val symbol: String = "",
+    @SerialName("Name") val name: String = "",
+    @SerialName("AssetType") val assetType: String = "",
+    @SerialName("Exchange") val exchange: String = "",
+    @SerialName("Industry") val industry: String = "",
+    @SerialName("Description") val description: String = "",
+    @SerialName("MarketCapitalization") val marketCapitalization: String = "",
+    @SerialName("OfficialSite") val officialSite: String = "",
+)
+
+@Serializable
+private data class AlphaVantageNewsResponse(
+    val feed: List<AlphaVantageNewsArticle>? = null,
+    @SerialName("Information") val information: String? = null,
+    @SerialName("Note") val note: String? = null,
+)
+
+@Serializable
+private data class AlphaVantageNewsArticle(
+    val title: String = "",
+    val url: String = "",
+    @SerialName("time_published") val timePublished: String = "",
+    val summary: String = "",
+    val source: String = "",
 )

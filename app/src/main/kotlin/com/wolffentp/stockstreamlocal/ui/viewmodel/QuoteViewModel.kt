@@ -8,11 +8,14 @@ import com.wolffentp.stockstreamlocal.data.repository.QuoteRepository
 import com.wolffentp.stockstreamlocal.data.repository.TickerRepository
 import com.wolffentp.stockstreamlocal.market.model.DataSourceLabel
 import com.wolffentp.stockstreamlocal.market.model.QuoteResult
+import com.wolffentp.stockstreamlocal.market.model.SecurityDetails
+import com.wolffentp.stockstreamlocal.market.provider.ProviderFactory
 import com.wolffentp.stockstreamlocal.market.provider.QuoteRefreshManager
 import com.wolffentp.stockstreamlocal.market.provider.RefreshState
 import com.wolffentp.stockstreamlocal.settings.SettingsRepository
 import com.wolffentp.stockstreamlocal.util.NetworkMonitor
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +25,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @HiltViewModel
@@ -31,6 +35,7 @@ class QuoteViewModel @Inject constructor(
     private val quoteRepository: QuoteRepository,
     private val portfolioRepository: PortfolioRepository,
     private val settingsRepository: SettingsRepository,
+    private val providerFactory: ProviderFactory,
     val networkMonitor: NetworkMonitor,
 ) : ViewModel() {
 
@@ -61,6 +66,33 @@ class QuoteViewModel @Inject constructor(
 
     val isOnline: StateFlow<Boolean> = networkMonitor.onlineState
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    private val _detailState = MutableStateFlow<SecurityDetailState>(SecurityDetailState.Closed)
+    val detailState: StateFlow<SecurityDetailState> = _detailState.asStateFlow()
+
+    fun showSecurityDetails(symbol: String) {
+        val normalized = symbol.trim().uppercase()
+        _detailState.value = SecurityDetailState.Loading(normalized)
+        viewModelScope.launch {
+            val state = try {
+                val details = withContext(Dispatchers.IO) {
+                    providerFactory.buildProvider().getSecurityDetails(normalized)
+                }
+                SecurityDetailState.Loaded(details)
+            } catch (e: Exception) {
+                SecurityDetailState.Error(normalized, e.message ?: "Unable to load details and news.")
+            }
+            val currentSymbol = when (val current = _detailState.value) {
+                is SecurityDetailState.Loading -> current.symbol
+                else -> null
+            }
+            if (currentSymbol == normalized) _detailState.value = state
+        }
+    }
+
+    fun closeSecurityDetails() {
+        _detailState.value = SecurityDetailState.Closed
+    }
 
     // ─── Sorting ──────────────────────────────────────────────────────────────
 
@@ -161,6 +193,13 @@ class QuoteViewModel @Inject constructor(
         super.onCleared()
         refreshManager.stop()
     }
+}
+
+sealed class SecurityDetailState {
+    object Closed : SecurityDetailState()
+    data class Loading(val symbol: String) : SecurityDetailState()
+    data class Loaded(val details: SecurityDetails) : SecurityDetailState()
+    data class Error(val symbol: String, val message: String) : SecurityDetailState()
 }
 
 // ─── Portfolio enrichment ──────────────────────────────────────────────────────
