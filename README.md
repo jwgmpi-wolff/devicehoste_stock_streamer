@@ -1,7 +1,5 @@
 # StockStream Local
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fjerrywolff_microsoft%2Fdevicehoste_stock_streamer%2Fmain%2Finfra%2Fazuredeploy.json)
-
 [Download the latest Android APK](https://github.com/jerrywolff_microsoft/devicehoste_stock_streamer/releases/latest/download/StockStreamLocal-debug.apk)
 
 StockStream Local is a private, device-first Android portfolio and quote tracker. It calls the selected market-data provider directly, stores portfolio data locally, and labels every displayed value as live, delayed, stale, imported, calculated, unavailable, or not provided.
@@ -17,11 +15,11 @@ StockStream Local is a private, device-first Android portfolio and quote tracker
 - Local PIN and biometric unlock with Android Keystore-backed encrypted preferences.
 - Room and DataStore persistence with cloud backup disabled.
 - Red negative-change and LIVE badges for immediately visible price direction.
-- Local Windows deployment and optional Azure-hosted APK distribution.
+- Local Windows deployment and GitHub Release APK distribution.
 
 ## Architecture
 
-The Android application has no required backend. Provider credentials and financial data remain on the device. Azure deployment provisions only an HTTPS download site for the APK; it does not receive portfolio data or proxy market-data requests.
+The Android application has no backend. Provider credentials, portfolio data, and financial data remain on the device. GitHub Actions builds downloadable APK releases without embedding a provider key.
 
 ```mermaid
 flowchart LR
@@ -29,8 +27,7 @@ flowchart LR
     App --> Room[(Room database)]
     App --> Secure[Android Keystore]
     App --> Provider[Market data provider]
-    GitHub[GitHub Actions] --> Storage[Azure Storage static website]
-    Storage --> APK[Downloadable APK]
+    GitHub[GitHub Actions] --> APK[GitHub Release APK]
     APK --> App
 ```
 
@@ -143,18 +140,11 @@ The script validates ADB authorization, builds and installs the debug variant, a
 After a successful build, it also copies a versioned APK and `StockStreamLocal-debug.apk` to
 `%USERPROFILE%\OneDrive\Apps`. Pass `-ApkArchivePath` to use a different synchronized folder.
 
-## Deploy to Azure
-
-The button at the top provisions an HTTPS-only Azure Storage account. After provisioning, configure GitHub OIDC by following [.azure/pipeline-setup.md](.azure/pipeline-setup.md), then run **Build and deploy StockStream Local** in GitHub Actions. The workflow builds the APK, deploys [infra/main.bicep](infra/main.bicep), enables static website hosting through the Azure data-plane API, resolves the generated website endpoint, and publishes the download page without storage keys.
-
-The one-click button provisions infrastructure only. Publishing the APK requires the workflow because ARM deployments cannot upload repository build artifacts.
-
 ## Security
 
 - Do not commit `local.properties`, `keystore.properties`, API keys, or keystores.
 - Mobile API keys can be extracted from a sufficiently compromised device; use a restricted, read-only provider key.
-- The Azure distribution build contains no provider key.
-- Azure CI uses OIDC and RBAC rather than long-lived client secrets or storage account keys.
+- GitHub-built APKs contain no provider key.
 - Review provider terms before making direct client-side API calls.
 
 ## Regenerate this project with GitHub Copilot
@@ -186,15 +176,11 @@ Provide a concise Material 3 theme with accessible contrast, semantic content de
 
 Add scripts/deploy-local.ps1. It must locate adb from PATH or ANDROID_HOME, support optional -DeviceId and -AdbPath parameters, reject missing/ambiguous devices, run :app:installDebug, and launch com.wolffentp.android_stock_tracker.debug/com.wolffentp.stockstreamlocal.MainActivity.
 
-Add Azure distribution support without changing the app's local-only runtime architecture. Create infra/main.bicep that provisions a Standard_LRS StorageV2 account, HTTPS-only traffic, TLS 1.2 minimum, shared-key access disabled, and blob soft delete. Output the account name. Generate infra/azuredeploy.json from the Bicep file for a README Deploy to Azure button. Enable static website hosting in the authenticated deployment workflow because that setting uses the Storage data-plane API rather than the ARM resource schema, then query the storage account for its generated web endpoint.
-
-Add deployment/site/index.html as a responsive APK download page. This is a standalone repository, so add the executable workflow at .github/workflows/deploy-azure.yml with separate build and deploy jobs operating from the repository root. Build on windows-latest with JDK 17, upload the APK/site/screenshot artifact, authenticate to Azure with azure/login@v2 and GitHub OIDC, deploy Bicep, then use az storage blob upload-batch --auth-mode login to publish index.html, app-debug.apk, and the screenshot to $web. Use a protected production GitHub environment and variables named AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP, and AZURE_LOCATION. Never commit credentials. Add .azure/pipeline-setup.md explaining user-assigned managed identity federation and least-privilege RBAC.
-
 Add a repository-root .github/workflows/release.yml workflow triggered by stockstream-v* tags. Build the debug APK in GitHub without local.properties, publish it to a GitHub Release as StockStreamLocal-debug.apk, and add a README link to https://github.com/jerrywolff_microsoft/devicehoste_stock_streamer/releases/latest/download/StockStreamLocal-debug.apk. The release APK must never contain a provider API key.
 
-Write README.md with architecture, features, screenshot, prerequisites, local.properties example with placeholders only, build/test commands, local deployment, Azure deployment, security notes, and this complete regeneration prompt. Add a .gitignore that excludes local.properties, keystore.properties, keystores, .gradle, .kotlin, build output, and IDE metadata.
+Write README.md with architecture, features, screenshot, prerequisites, local.properties example with placeholders only, build/test commands, local deployment, GitHub Release distribution, security notes, and this complete regeneration prompt. Add a .gitignore that excludes local.properties, keystore.properties, keystores, .gradle, .kotlin, build output, and IDE metadata.
 
-Before finishing, run assembleDebug, focused unit tests, Bicep compilation, and PowerShell syntax validation. Fix defects caused by the generated code. Do not add secrets, generated build directories, or signing material to source control.
+Before finishing, run assembleDebug, focused unit tests, and PowerShell syntax validation. Fix defects caused by the generated code. Do not add secrets, generated build directories, or signing material to source control.
 ```
 
 ## License
