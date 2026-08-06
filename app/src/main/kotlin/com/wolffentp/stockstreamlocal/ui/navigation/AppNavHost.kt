@@ -13,11 +13,13 @@ import androidx.navigation.navArgument
 import com.wolffentp.stockstreamlocal.auth.AuthState
 import com.wolffentp.stockstreamlocal.settings.SettingsViewModel
 import com.wolffentp.stockstreamlocal.ui.screens.*
+import com.wolffentp.stockstreamlocal.ui.viewmodel.CsvImportViewModel
 
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
     val settingsVm: SettingsViewModel = hiltViewModel()
+    val csvImportVm: CsvImportViewModel = hiltViewModel()
     val authState by settingsVm.authState.collectAsStateWithLifecycle()
 
     // Redirect to lock screen whenever auth state becomes Locked
@@ -78,11 +80,15 @@ fun AppNavHost() {
             CsvImportScreen(
                 onNavigateToValidation = { navController.navigate(NavRoutes.IMPORT_VALIDATION) },
                 onNavigateBack = { navController.popBackStack() },
+                viewModel = csvImportVm,
             )
         }
 
         composable(NavRoutes.IMPORT_VALIDATION) {
-            ImportValidationScreen(onNavigateBack = { navController.popBackStack() })
+            ImportValidationScreen(
+                onNavigateBack = { navController.popBackStack() },
+                viewModel = csvImportVm,
+            )
         }
 
         composable(NavRoutes.SETTINGS) {
