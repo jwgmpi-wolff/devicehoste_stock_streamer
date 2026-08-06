@@ -2,6 +2,8 @@ name: Release StockStream Local APK
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'stockstream-v*'
   workflow_dispatch:
@@ -44,11 +46,23 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || (github.ref_type == 'branch' && 'stockstream-latest' || github.ref_name) }}
         run: |
+          if ($env:RELEASE_TAG -eq 'stockstream-latest') {
+            git tag --force $env:RELEASE_TAG $env:GITHUB_SHA
+            git push origin "refs/tags/$env:RELEASE_TAG" --force
+          }
+
           gh release view $env:RELEASE_TAG 2>$null
           if ($LASTEXITCODE -ne 0) {
-            $version = $env:RELEASE_TAG -replace '^stockstream-v', ''
-            gh release create $env:RELEASE_TAG --title "StockStream Local $version" --generate-notes
+            if ($env:RELEASE_TAG -eq 'stockstream-latest') {
+              gh release create $env:RELEASE_TAG --title "StockStream Local latest" --notes "Latest validated build from main." --latest
+            } else {
+              $version = $env:RELEASE_TAG -replace '^stockstream-v', ''
+              gh release create $env:RELEASE_TAG --title "StockStream Local $version" --generate-notes
+            }
           }
           gh release upload $env:RELEASE_TAG $env:APK_NAME --clobber
+          if ($env:RELEASE_TAG -eq 'stockstream-latest') {
+            gh release edit $env:RELEASE_TAG --latest
+          }

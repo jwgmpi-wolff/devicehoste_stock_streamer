@@ -66,20 +66,21 @@ class CsvParser @Inject constructor() {
         dataLines.forEachIndexed { idx, line ->
             if (line.isBlank()) return@forEachIndexed
             val cells = parseRow(line)
-            if (cells.size < headers.size && cells.none { it.isNotBlank() }) return@forEachIndexed
+            if (cells.none { it.isNotBlank() }) return@forEachIndexed
 
-            val symbol = cells.getOrNull(
+            val rawSymbol = cells.getOrNull(
                 headers.indexOfFirst { it.equals(CsvColumns.SYMBOL, ignoreCase = true) }
             )?.trim()
 
-            if (symbol.isNullOrBlank()) {
+            if (rawSymbol.isNullOrBlank()) {
                 rowErrors.add(RowError(rowIndex = idx + headerLineIndex + 2, reason = "Missing symbol"))
                 return@forEachIndexed
             }
 
             // Skip Fidelity subtotal/total rows
-            if (symbol.startsWith("--") || symbol.equals("Subtotal", ignoreCase = true) ||
-                symbol.equals("Account Total", ignoreCase = true)) {
+            if (rawSymbol.startsWith("--") || rawSymbol.equals("Subtotal", ignoreCase = true) ||
+                rawSymbol.equals("Account Total", ignoreCase = true) ||
+                rawSymbol.equals("TOTALS", ignoreCase = true)) {
                 return@forEachIndexed
             }
 
@@ -87,6 +88,7 @@ class CsvParser @Inject constructor() {
             headers.forEachIndexed { colIdx, header ->
                 row[header] = cells.getOrElse(colIdx) { "" }.trim()
             }
+            row[CsvColumns.SYMBOL] = normalizeFidelitySymbol(rawSymbol)
             rows.add(row)
         }
 
@@ -137,4 +139,7 @@ class CsvParser @Inject constructor() {
 
     private fun normalizeHeader(raw: String): String =
         raw.trimStart('\uFEFF').trim()
+
+    private fun normalizeFidelitySymbol(raw: String): String =
+        raw.replace(Regex("\\s*\\(Core account\\)\\s*$", RegexOption.IGNORE_CASE), "").trim()
 }

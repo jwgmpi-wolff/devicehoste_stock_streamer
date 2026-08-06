@@ -98,6 +98,26 @@ class CsvParserTest {
     }
 
     @Test
+    fun `parses Fidelity all accounts export for watchlist import`() {
+        val csv = """
+            Positions: All Accounts
+            08/06/2026 03:23:18 PM ET
+
+            "Symbol","Last","Quantity","Purchase Price","Account"
+            "ARM","$140.00","2","$100.00","Brokerage"
+            "SPAXX (Core account)","$1.00","100","$1.00","Cash Management"
+            "TOTALS","","102","",""
+            "","","","",""
+        """.trimIndent()
+
+        val result = parser.parse(csv.byteInputStream()) as CsvImportResult.Success
+
+        assertEquals(2, result.validRows)
+        assertEquals(listOf("ARM", "SPAXX"), result.rows.map { it["Symbol"] })
+        assertTrue(result.rowErrors.isEmpty())
+    }
+
+    @Test
     fun `records row error for missing symbol`() {
         val csv = "Symbol,Last\n,150.00\nNVDA,450"
         val result = parser.parse(csv.byteInputStream()) as CsvImportResult.Success
