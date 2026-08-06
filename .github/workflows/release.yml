@@ -9,8 +9,8 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing stockstream-v* tag to release
-        required: true
+        description: Optional existing stockstream-v* tag; leave blank for the rolling latest APK
+        required: false
         type: string
 
 permissions:
@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-java@v4
         with:
@@ -46,7 +46,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || (github.ref_type == 'branch' && 'stockstream-latest' || github.ref_name) }}
+          RELEASE_TAG: ${{ inputs.tag || (github.ref_type == 'branch' && 'stockstream-latest' || github.ref_name) }}
         run: |
           if ($env:RELEASE_TAG -eq 'stockstream-latest') {
             git tag --force $env:RELEASE_TAG $env:GITHUB_SHA
