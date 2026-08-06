@@ -19,9 +19,11 @@ import com.wolffentp.stockstreamlocal.ui.components.AddHoldingsDialog
 import com.wolffentp.stockstreamlocal.ui.components.QuoteRow
 import com.wolffentp.stockstreamlocal.ui.components.SecurityDetailDialog
 import com.wolffentp.stockstreamlocal.ui.components.StatusBanner
+import com.wolffentp.stockstreamlocal.ui.viewmodel.PortfolioSummary
 import com.wolffentp.stockstreamlocal.ui.viewmodel.QuoteViewModel
 import com.wolffentp.stockstreamlocal.ui.viewmodel.RotatingViewViewModel
 import com.wolffentp.stockstreamlocal.ui.viewmodel.SecurityDetailState
+import com.wolffentp.stockstreamlocal.util.Formatters
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -120,6 +122,28 @@ fun HomeScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             StatusBanner(refreshState = refreshState, isOnline = isOnline)
+
+            val totalGain = if (currentIndex == 0) PortfolioSummary.totalGain(quotes.values) else null
+            if (totalGain != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Total Gain", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            text = Formatters.currency(totalGain),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (totalGain >= 0.0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
 
             val visibleColumns = currentView?.let { view ->
                 AllColumns.definitions.filter {
