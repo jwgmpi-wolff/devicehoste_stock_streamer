@@ -1,31 +1,20 @@
-name: Release StockStream Local APK
+name: Validate StockStream Local APK
 
 on:
   push:
     branches:
       - main
-    tags:
-      - 'stockstream-v*'
+  pull_request:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: Optional existing stockstream-v* tag; leave blank for the rolling latest APK
-        required: false
-        type: string
 
 permissions:
-  contents: write
-
-env:
-  APK_NAME: StockStreamLocal-debug.apk
+  contents: read
 
 jobs:
-  release:
+  validate:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.tag || github.ref }}
 
       - uses: actions/setup-java@v4
         with:
@@ -34,35 +23,6 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build APK without embedded provider credentials
+      - name: Test and build APK without embedded provider credentials
         shell: pwsh
-        run: .\gradlew.bat :app:assembleDebug --console=plain
-
-      - name: Name release asset
-        shell: pwsh
-        run: Copy-Item app/build/outputs/apk/debug/app-debug.apk $env:APK_NAME
-
-      - name: Publish GitHub release
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ inputs.tag || (github.ref_type == 'branch' && 'stockstream-latest' || github.ref_name) }}
-        run: |
-          if ($env:RELEASE_TAG -eq 'stockstream-latest') {
-            git tag --force $env:RELEASE_TAG $env:GITHUB_SHA
-            git push origin "refs/tags/$env:RELEASE_TAG" --force
-          }
-
-          gh release view $env:RELEASE_TAG 2>$null
-          if ($LASTEXITCODE -ne 0) {
-            if ($env:RELEASE_TAG -eq 'stockstream-latest') {
-              gh release create $env:RELEASE_TAG --title "StockStream Local latest" --notes "Latest validated build from main." --latest
-            } else {
-              $version = $env:RELEASE_TAG -replace '^stockstream-v', ''
-              gh release create $env:RELEASE_TAG --title "StockStream Local $version" --generate-notes
-            }
-          }
-          gh release upload $env:RELEASE_TAG $env:APK_NAME --clobber
-          if ($env:RELEASE_TAG -eq 'stockstream-latest') {
-            gh release edit $env:RELEASE_TAG --latest
-          }
+        run: .\gradlew.bat :app:testDebugUnitTest :app:assembleDebug --console=plain

@@ -1,6 +1,6 @@
 # StockStream Local
 
-[Download the latest Android APK](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/latest/download/StockStreamLocal-debug.apk)
+[Download StockStream Local 1.0.3](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.3/StockStreamLocal-debug.apk)
 
 StockStream Local is a private, device-first Android portfolio and quote tracker. It calls the selected market-data provider directly, stores portfolio data locally, and labels every displayed value as live, delayed, stale, imported, calculated, unavailable, or not provided.
 
@@ -27,7 +27,7 @@ flowchart LR
     App --> Room[(Room database)]
     App --> Secure[Android Keystore]
     App --> Provider[Market data provider]
-    GitHub[GitHub Actions] --> APK[GitHub Release APK]
+    Release[Locally signed release] --> APK[GitHub Release APK]
     APK --> App
 ```
 
@@ -118,9 +118,9 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Download APK
 
-[Download StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/latest/download/StockStreamLocal-debug.apk)
+[Download StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.3/StockStreamLocal-debug.apk)
 
-This is a GitHub-built development APK for Android 8.0 and newer. It contains no market-provider API key. Android may ask you to allow installation from your browser or file manager; configure your provider in the app after installation.
+This is a locally signed development APK for Android 8.0 and newer. It contains no imported portfolio database or market-provider API key. Android may ask you to allow installation from your browser or file manager; configure your provider in the app after installation. GitHub Actions validates builds but does not publish APKs because the private signing key is intentionally excluded from the repository.
 
 ## Deploy locally
 
