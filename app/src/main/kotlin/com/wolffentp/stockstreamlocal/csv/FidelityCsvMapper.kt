@@ -16,9 +16,15 @@ import javax.inject.Singleton
 class FidelityCsvMapper @Inject constructor() {
 
     fun mapRows(rows: List<Map<String, String>>, sourceFileName: String): List<PortfolioLotEntity> {
-        return rows.mapNotNull { row ->
+        val mappedRows = rows.mapNotNull { row ->
             val symbol = row.ci(CsvColumns.SYMBOL)?.trim()?.uppercase() ?: return@mapNotNull null
             if (symbol.isBlank()) return@mapNotNull null
+
+            val quantity = row.ci(CsvColumns.QUANTITY)?.cleanNumber()
+            val purchasePrice = row.ci(CsvColumns.PURCHASE_PRICE)?.cleanNumber()
+                ?: row.ci(CsvColumns.COST_BASIS)?.cleanNumber()?.let { totalCost ->
+                    quantity?.takeIf { it != 0.0 }?.let { totalCost / it }
+                }
 
             val dayRange = row.ci(CsvColumns.DAY_RANGE)
             val (dayLow, dayHigh) = parseRange(dayRange)
@@ -34,13 +40,13 @@ class FidelityCsvMapper @Inject constructor() {
                 importedAsk = row.ci(CsvColumns.ASK)?.cleanNumber(),
                 importedChg = row.ci(CsvColumns.CHG)?.cleanNumber(),
                 importedTdyGainLoss = row.ci(CsvColumns.TDY_GAIN_LOSS)?.cleanNumber(),
-                quantity = row.ci(CsvColumns.QUANTITY)?.cleanNumber(),
+                quantity = quantity,
                 importedVolume = row.ci(CsvColumns.VOLUME)?.cleanNumber()?.toLong(),
                 importedDayRangeLow = dayLow,
                 importedDayRangeHigh = dayHigh,
                 importedWeekRange52Low = weekLow,
                 importedWeekRange52High = weekHigh,
-                purchasePrice = row.ci(CsvColumns.PURCHASE_PRICE)?.cleanNumber(),
+                purchasePrice = purchasePrice,
                 importedValue = row.ci(CsvColumns.VALUE)?.cleanNumber(),
                 importedPctTdyGainLoss = row.ci(CsvColumns.PCT_TDY_GAIN_LOSS)?.cleanPercent(),
                 importedGainLoss = row.ci(CsvColumns.GAIN_LOSS)?.cleanNumber(),
@@ -53,6 +59,26 @@ class FidelityCsvMapper @Inject constructor() {
                 sourceFileName = sourceFileName,
             )
         }
+
+        return mappedRows
+            .groupBy { it.symbol to it.account }
+            .values
+            .map(::aggregateLots)
+    }
+
+    private fun aggregateLots(lots: List<PortfolioLotEntity>): PortfolioLotEntity {
+        val latest = lots.last()
+        val totalQuantity = lots.mapNotNull { it.quantity }.sum()
+        val totalCost = lots.sumOf { (it.quantity ?: 0.0) * (it.purchasePrice ?: 0.0) }
+        return latest.copy(
+            id = 0,
+            quantity = totalQuantity.takeIf { it != 0.0 },
+            purchasePrice = if (totalQuantity != 0.0 && totalCost != 0.0) totalCost / totalQuantity else latest.purchasePrice,
+            importedTdyGainLoss = lots.mapNotNull { it.importedTdyGainLoss }.takeIf { it.isNotEmpty() }?.sum(),
+            importedValue = lots.mapNotNull { it.importedValue }.takeIf { it.isNotEmpty() }?.sum(),
+            importedGainLoss = lots.mapNotNull { it.importedGainLoss }.takeIf { it.isNotEmpty() }?.sum(),
+            importedCloseValue = lots.mapNotNull { it.importedCloseValue }.takeIf { it.isNotEmpty() }?.sum(),
+        )
     }
 
     /** Case-insensitive key lookup in the row map. */

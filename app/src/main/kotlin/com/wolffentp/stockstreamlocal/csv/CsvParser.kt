@@ -30,7 +30,7 @@ class CsvParser @Inject constructor() {
 
         // Find header row (first row that contains the SYMBOL column)
         val headerLineIndex = lines.indexOfFirst { line ->
-            parseRow(line).any { it.trim().equals(CsvColumns.SYMBOL, ignoreCase = true) }
+            parseRow(line).any { normalizeHeader(it).equals(CsvColumns.SYMBOL, ignoreCase = true) }
         }
 
         if (headerLineIndex < 0) {
@@ -137,9 +137,32 @@ class CsvParser @Inject constructor() {
         return result
     }
 
-    private fun normalizeHeader(raw: String): String =
-        raw.trimStart('\uFEFF').trim()
+    private fun normalizeHeader(raw: String): String {
+        val header = raw.trimStart('\uFEFF').trim()
+        return HEADER_ALIASES.entries.firstOrNull { (_, aliases) ->
+            aliases.any { it.equals(header, ignoreCase = true) }
+        }?.key ?: header
+    }
 
     private fun normalizeFidelitySymbol(raw: String): String =
         raw.replace(Regex("\\s*\\(Core account\\)\\s*$", RegexOption.IGNORE_CASE), "").trim()
+
+    private companion object {
+        val HEADER_ALIASES = mapOf(
+            CsvColumns.SYMBOL to setOf("Symbol", "Ticker", "Ticker Symbol", "Security Symbol"),
+            CsvColumns.LAST to setOf("Last", "Price", "Last Price", "Current Price", "Market Price"),
+            CsvColumns.QUANTITY to setOf("Quantity", "Qty", "Shares", "Units"),
+            CsvColumns.PURCHASE_PRICE to setOf(
+                "Purchase Price", "Average Cost", "Avg Cost", "Average Price", "Cost Per Share", "Unit Cost",
+            ),
+            CsvColumns.COST_BASIS to setOf("Cost Basis", "Total Cost", "Total Cost Basis", "Book Cost"),
+            CsvColumns.VALUE to setOf("Value", "Market Value", "Current Value", "Position Value"),
+            CsvColumns.GAIN_LOSS to setOf("G/L", "Gain/Loss", "Unrealized Gain/Loss", "Unrealized G/L", "Total Gain/Loss"),
+            CsvColumns.PCT_GAIN_LOSS to setOf("% G/L", "Gain/Loss %", "Unrealized Gain/Loss %", "Total Gain/Loss %"),
+            CsvColumns.TDY_GAIN_LOSS to setOf("Tdy G/L", "Day Gain/Loss", "Today's Gain/Loss", "Daily Gain/Loss"),
+            CsvColumns.PCT_TDY_GAIN_LOSS to setOf("% Tdy G/L", "Day Gain/Loss %", "Today's Gain/Loss %", "Daily Gain/Loss %"),
+            CsvColumns.ACCOUNT to setOf("Account", "Account Name", "Account Number", "Portfolio"),
+            CsvColumns.PREV_CLOSE to setOf("Prev Close", "Previous Close"),
+        )
+    }
 }

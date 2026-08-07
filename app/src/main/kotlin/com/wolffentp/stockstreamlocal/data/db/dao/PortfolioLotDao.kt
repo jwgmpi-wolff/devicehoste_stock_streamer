@@ -24,11 +24,37 @@ interface PortfolioLotDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(lots: List<PortfolioLotEntity>)
 
+    @Transaction
+    suspend fun reconcileImported(lots: List<PortfolioLotEntity>) {
+        lots.map { it.sourceFileName }.filter { it.isNotBlank() }.distinct().forEach { sourceFileName ->
+            deleteImportedBySourceFile(sourceFileName)
+        }
+        lots.forEach { lot ->
+            deleteImportedBySymbolAndAccount(lot.symbol, lot.account)
+        }
+        insertAll(lots)
+    }
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(lot: PortfolioLotEntity)
 
     @Query("DELETE FROM portfolio_lots WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM portfolio_lots WHERE symbol = :symbol AND account = :account AND sourceFileName != 'Manual Entry'")
+    suspend fun deleteImportedBySymbolAndAccount(symbol: String, account: String)
+
+    @Query("DELETE FROM portfolio_lots WHERE sourceFileName = :sourceFileName AND sourceFileName != 'Manual Entry'")
+    suspend fun deleteImportedBySourceFile(sourceFileName: String)
+
+    @Query("DELETE FROM portfolio_lots WHERE symbol = :symbol")
+    suspend fun deleteBySymbol(symbol: String)
+
+    @Transaction
+    suspend fun replaceSymbol(lot: PortfolioLotEntity) {
+        deleteBySymbol(lot.symbol)
+        insert(lot)
+    }
 
     @Query("DELETE FROM portfolio_lots")
     suspend fun deleteAll()

@@ -26,7 +26,7 @@ fun AddHoldingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Holding for $symbol") },
+        title = { Text("Edit Holding for $symbol") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -81,7 +81,7 @@ fun AddHoldingsDialog(
                     }
                 },
             ) {
-                Text("Add")
+                Text("Save")
             }
         },
         dismissButton = {

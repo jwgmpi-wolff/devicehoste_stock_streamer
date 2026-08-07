@@ -1,5 +1,7 @@
 package com.wolffentp.stockstreamlocal.ui.viewmodel
 
+import com.wolffentp.stockstreamlocal.data.model.PortfolioLotEntity
+import com.wolffentp.stockstreamlocal.market.model.DataSourceLabel
 import com.wolffentp.stockstreamlocal.market.model.QuoteResult
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -36,6 +38,25 @@ class PortfolioSummaryTest {
         )
 
         assertNull(PortfolioSummary.totalGain(quotes))
+    }
+
+    @Test
+    fun `live quote calculates gain from imported Fidelity holdings and retains provenance`() {
+        val quote = QuoteResult.notConfigured("ARM").copy(last = 289.08)
+        val lots = listOf(
+            PortfolioLotEntity(symbol = "ARM", account = "Individual", quantity = 13.0, purchasePrice = 64.02),
+            PortfolioLotEntity(symbol = "ARM", account = "Cash Management", quantity = 10.0, purchasePrice = 95.14),
+        )
+
+        val enriched = enrichQuoteWithPortfolio(quote, lots)
+
+        assertEquals(23.0, enriched.quantity!!, 0.001)
+        assertEquals((13.0 * 64.02 + 10.0 * 95.14) / 23.0, enriched.purchasePrice!!, 0.001)
+        assertEquals(23.0 * 289.08 - (13.0 * 64.02 + 10.0 * 95.14), enriched.gainLoss!!, 0.001)
+        assertEquals(DataSourceLabel.IMPORTED_BASELINE, enriched.quantityLabel)
+        assertEquals(DataSourceLabel.IMPORTED_BASELINE, enriched.purchasePriceLabel)
+        assertEquals(DataSourceLabel.CALCULATED, enriched.gainLossLabel)
+        assertEquals("Individual, Cash Management", enriched.account)
     }
 
     private fun holding(

@@ -133,7 +133,7 @@ class QuoteViewModel @Inject constructor(
      * Add or update a holding for a symbol.
      * Creates a new portfolio lot with the provided quantity and purchase price.
      */
-    fun addHolding(symbol: String, quantity: Double, purchasePrice: Double, account: String = "Default") {
+    fun replaceHolding(symbol: String, quantity: Double, purchasePrice: Double, account: String = "Manual") {
         viewModelScope.launch {
             val lot = PortfolioLotEntity(
                 symbol = symbol.uppercase().trim(),
@@ -142,7 +142,7 @@ class QuoteViewModel @Inject constructor(
                 purchasePrice = purchasePrice,
                 sourceFileName = "Manual Entry",
             )
-            portfolioRepository.addOrUpdateLot(lot)
+            portfolioRepository.replaceSymbolHolding(lot)
         }
     }
 
@@ -208,7 +208,7 @@ sealed class SecurityDetailState {
  * Enriches a live quote with aggregated portfolio data (quantity, gain/loss).
  * Calculates derived fields based on current last price and imported cost basis.
  */
-private fun enrichQuoteWithPortfolio(quote: QuoteResult, lots: List<PortfolioLotEntity>): QuoteResult {
+internal fun enrichQuoteWithPortfolio(quote: QuoteResult, lots: List<PortfolioLotEntity>): QuoteResult {
     if (lots.isEmpty()) return quote
 
     val totalQty = lots.mapNotNull { it.quantity }.sum()
@@ -221,13 +221,16 @@ private fun enrichQuoteWithPortfolio(quote: QuoteResult, lots: List<PortfolioLot
 
     return quote.copy(
         quantity = if (totalQty > 0.0) totalQty else null,
+        quantityLabel = DataSourceLabel.IMPORTED_BASELINE,
         purchasePrice = if (totalCostBasis > 0.0) (totalCostBasis / totalQty) else null,
+        purchasePriceLabel = DataSourceLabel.IMPORTED_BASELINE,
         value = currentValue,
         valueLabel = DataSourceLabel.CALCULATED,
-        gainLoss = gainLoss.takeIf { it != 0.0 },
+        gainLoss = gainLoss,
         gainLossLabel = DataSourceLabel.CALCULATED,
-        pctGainLoss = pctGainLoss.takeIf { it != 0.0 },
+        pctGainLoss = pctGainLoss,
         pctGainLossLabel = DataSourceLabel.CALCULATED,
+        account = lots.map { it.account }.filter { it.isNotBlank() }.distinct().joinToString(", ").ifBlank { null },
     )
 }
 

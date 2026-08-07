@@ -27,7 +27,7 @@ class CsvParserTest {
 
     @Test
     fun `returns HeaderError when Symbol column is absent`() {
-        val csv = "Ticker,Price\nAAPL,150.00"
+        val csv = "Security,Price\nAAPL,150.00"
         val result = parser.parse(csv.byteInputStream())
         assertTrue("Expected HeaderError", result is CsvImportResult.HeaderError)
         assertTrue((result as CsvImportResult.HeaderError).missingColumns.contains("Symbol"))
@@ -132,5 +132,21 @@ class CsvParserTest {
         val csv = "Symbol,Last,Account\nGME,20.00,Account1\nGME,20.00,Account2"
         val result = parser.parse(csv.byteInputStream()) as CsvImportResult.Success
         assertEquals(2, result.validRows)
+    }
+
+    @Test
+    fun `normalizes common brokerage headers without confusing total and unit cost`() {
+        val csv = "Ticker,Current Price,Shares,Average Cost,Total Cost Basis,Market Value,Account Name\nAAPL,200,10,125,1250,2000,Brokerage"
+
+        val result = parser.parse(csv.byteInputStream()) as CsvImportResult.Success
+        val row = result.rows.single()
+
+        assertEquals("AAPL", row[CsvColumns.SYMBOL])
+        assertEquals("200", row[CsvColumns.LAST])
+        assertEquals("10", row[CsvColumns.QUANTITY])
+        assertEquals("125", row[CsvColumns.PURCHASE_PRICE])
+        assertEquals("1250", row[CsvColumns.COST_BASIS])
+        assertEquals("2000", row[CsvColumns.VALUE])
+        assertEquals("Brokerage", row[CsvColumns.ACCOUNT])
     }
 }

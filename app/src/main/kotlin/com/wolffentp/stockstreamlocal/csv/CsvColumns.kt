@@ -16,6 +16,7 @@ object CsvColumns {
     const val DAY_RANGE = "Day Range"
     const val WEEK_RANGE_52 = "52 Wk Range"
     const val PURCHASE_PRICE = "Purchase Price"
+    const val COST_BASIS = "Cost Basis"
     const val VALUE = "Value"
     const val PCT_TDY_GAIN_LOSS = "% Tdy G/L"
     const val GAIN_LOSS = "G/L"
@@ -30,7 +31,7 @@ object CsvColumns {
 
     val ALL_COLUMNS = setOf(
         SYMBOL, LAST, BID, CHG, ASK, TDY_GAIN_LOSS, QUANTITY, VOLUME,
-        DAY_RANGE, WEEK_RANGE_52, PURCHASE_PRICE, VALUE, PCT_TDY_GAIN_LOSS,
+        DAY_RANGE, WEEK_RANGE_52, PURCHASE_PRICE, COST_BASIS, VALUE, PCT_TDY_GAIN_LOSS,
         GAIN_LOSS, PCT_GAIN_LOSS, ACCOUNT, CLOSE_VALUE, EARNINGS_DATE,
         DIV_DATE, PREV_CLOSE,
     )

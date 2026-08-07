@@ -225,10 +225,13 @@ fun HomeScreen(
 
     // Holdings dialog
     showAddHoldingsDialog?.let { symbol ->
+        val holding = quotes[symbol]
         AddHoldingsDialog(
             symbol = symbol,
+            initialQuantity = holding?.quantity ?: 0.0,
+            initialPrice = holding?.purchasePrice ?: 0.0,
             onConfirm = { qty, price ->
-                quoteVm.addHolding(symbol, qty, price)
+                quoteVm.replaceHolding(symbol, qty, price)
             },
             onDismiss = { showAddHoldingsDialog = null },
         )
