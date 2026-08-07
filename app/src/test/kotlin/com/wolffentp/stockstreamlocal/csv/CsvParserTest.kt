@@ -115,6 +115,7 @@ class CsvParserTest {
         assertEquals(2, result.validRows)
         assertEquals(listOf("ARM", "SPAXX"), result.rows.map { it["Symbol"] })
         assertTrue(result.rowErrors.isEmpty())
+        assertTrue(result.isAllAccountsSnapshot)
     }
 
     @Test
@@ -148,5 +149,6 @@ class CsvParserTest {
         assertEquals("1250", row[CsvColumns.COST_BASIS])
         assertEquals("2000", row[CsvColumns.VALUE])
         assertEquals("Brokerage", row[CsvColumns.ACCOUNT])
+        assertFalse(result.isAllAccountsSnapshot)
     }
 }

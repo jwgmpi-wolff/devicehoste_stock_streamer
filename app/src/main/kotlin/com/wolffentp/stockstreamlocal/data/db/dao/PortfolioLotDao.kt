@@ -25,12 +25,16 @@ interface PortfolioLotDao {
     suspend fun insertAll(lots: List<PortfolioLotEntity>)
 
     @Transaction
-    suspend fun reconcileImported(lots: List<PortfolioLotEntity>) {
-        lots.map { it.sourceFileName }.filter { it.isNotBlank() }.distinct().forEach { sourceFileName ->
-            deleteImportedBySourceFile(sourceFileName)
-        }
-        lots.forEach { lot ->
-            deleteImportedBySymbolAndAccount(lot.symbol, lot.account)
+    suspend fun reconcileImported(lots: List<PortfolioLotEntity>, replaceAllImported: Boolean = false) {
+        if (replaceAllImported) {
+            deleteAllImported()
+        } else {
+            lots.map { it.sourceFileName }.filter { it.isNotBlank() }.distinct().forEach { sourceFileName ->
+                deleteImportedBySourceFile(sourceFileName)
+            }
+            lots.forEach { lot ->
+                deleteImportedBySymbolAndAccount(lot.symbol, lot.account)
+            }
         }
         insertAll(lots)
     }
@@ -46,6 +50,9 @@ interface PortfolioLotDao {
 
     @Query("DELETE FROM portfolio_lots WHERE sourceFileName = :sourceFileName AND sourceFileName != 'Manual Entry'")
     suspend fun deleteImportedBySourceFile(sourceFileName: String)
+
+    @Query("DELETE FROM portfolio_lots WHERE sourceFileName != 'Manual Entry'")
+    suspend fun deleteAllImported()
 
     @Query("DELETE FROM portfolio_lots WHERE symbol = :symbol")
     suspend fun deleteBySymbol(symbol: String)

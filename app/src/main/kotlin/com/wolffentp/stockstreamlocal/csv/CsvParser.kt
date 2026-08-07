@@ -40,6 +40,10 @@ class CsvParser @Inject constructor() {
             )
         }
 
+        val isAllAccountsSnapshot = lines.take(headerLineIndex).any { line ->
+            line.trim().equals("Positions: All Accounts", ignoreCase = true)
+        }
+
         val rawHeaders = parseRow(lines[headerLineIndex]).map { it.trim() }
         val headers = rawHeaders.map { normalizeHeader(it) }
 
@@ -99,6 +103,7 @@ class CsvParser @Inject constructor() {
             rowErrors = rowErrors,
             detectedHeaders = rawHeaders,
             missingOptionalColumns = missingOptional,
+            isAllAccountsSnapshot = isAllAccountsSnapshot,
         )
     }
 

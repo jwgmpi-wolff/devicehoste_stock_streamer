@@ -8,6 +8,7 @@ sealed class CsvImportResult {
         val rowErrors: List<RowError>,
         val detectedHeaders: List<String>,
         val missingOptionalColumns: List<String>,
+        val isAllAccountsSnapshot: Boolean,
     ) : CsvImportResult()
 
     data class HeaderError(

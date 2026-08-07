@@ -51,7 +51,7 @@ class CsvImportViewModel @Inject constructor(
     fun confirmImport(result: CsvImportResult.Success, fileName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val lots = csvMapper.mapRows(result.rows, fileName)
-            portfolioRepository.importLots(lots)
+            portfolioRepository.importLots(lots, replaceAllImported = result.isAllAccountsSnapshot)
             // Offer watchlist addition for valid symbols
             val newSymbols = lots.map { it.symbol }.distinct()
             val symbols = newSymbols.filter { tickerRepository.getBySymbol(it) == null }

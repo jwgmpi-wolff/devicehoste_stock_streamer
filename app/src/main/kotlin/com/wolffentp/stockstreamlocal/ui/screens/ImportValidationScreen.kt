@@ -58,6 +58,11 @@ fun ImportValidationScreen(
                                 Row { Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF1B5E20)); Spacer(Modifier.width(8.dp)); Text("Parse successful", style = MaterialTheme.typography.titleMedium) }
                                 Text("File: $fileName", style = MaterialTheme.typography.bodySmall)
                                 Text("Valid rows: ${result.validRows} / ${result.totalRows}", style = MaterialTheme.typography.bodySmall)
+                                Text(
+                                    if (result.isAllAccountsSnapshot) "Reconciliation: replace prior imported holdings (all accounts)"
+                                    else "Reconciliation: update matching imported holdings",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                                 Text("Headers found: ${result.detectedHeaders.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
                                 if (result.missingOptionalColumns.isNotEmpty())
                                     Text("Optional columns not found: ${result.missingOptionalColumns.joinToString(", ")}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
