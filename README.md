@@ -1,6 +1,6 @@
 # StockStream Local
 
-[Download StockStream Local 1.0.4](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.4/StockStreamLocal-debug.apk)
+[Download StockStream Local 1.0.5](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.5/StockStreamLocal-debug.apk)
 
 StockStream Local is a private, device-first Android portfolio and quote tracker. It calls the selected market-data provider directly, stores portfolio data locally, and labels every displayed value as live, delayed, stale, imported, calculated, unavailable, or not provided.
 
@@ -107,6 +107,18 @@ The debug build may use `provider.apiKey` as a local default. A key entered in P
 The `local.properties` option is intended only for developer-owned debug builds. Never commit API
 keys, add them to `README.md`, or include them in screenshots, logs, issue reports, or release APKs.
 
+## Sync Fidelity positions
+
+1. Open **Import** in StockStream and select **Open Fidelity & Export**.
+2. Sign in to Fidelity in the system browser and open the **Positions** page.
+3. Use Fidelity's **Download** or **Export** control to save the positions CSV.
+4. Return to StockStream. The Android file picker opens automatically; select the downloaded CSV.
+5. Review the parsed holdings and reconciliation mode, then select **Import Rows** to confirm.
+
+Logging in alone does not transfer holdings. Fidelity must export the CSV because StockStream has
+no backend and cannot access browser cookies or brokerage credentials. The CSV is parsed and stored
+only on the device. Use **Choose CSV Manually** if the automatic picker is dismissed.
+
 ## Build and test
 
 ```powershell
@@ -118,7 +130,7 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Download APK
 
-[Download StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.4/StockStreamLocal-debug.apk)
+[Download StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.5/StockStreamLocal-debug.apk)
 
 This is a locally signed development APK for Android 8.0 and newer. It contains no imported portfolio database or market-provider API key. Android may ask you to allow installation from your browser or file manager; configure your provider in the app after installation. GitHub Actions validates builds but does not publish APKs because the private signing key is intentionally excluded from the repository.
 

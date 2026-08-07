@@ -4,21 +4,28 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wolffentp.stockstreamlocal.csv.CsvImportResult
 import com.wolffentp.stockstreamlocal.ui.viewmodel.CsvImportViewModel
 import com.wolffentp.stockstreamlocal.ui.viewmodel.ImportState
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,12 +35,26 @@ fun CsvImportScreen(
     viewModel: CsvImportViewModel = hiltViewModel(),
 ) {
     val importState by viewModel.importState.collectAsStateWithLifecycle()
-    var selectedUri by remember { mutableStateOf<Uri?>(null) }
+    var awaitingFidelityExport by rememberSaveable { mutableStateOf(false) }
     val snackbarHost = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentAwaitingFidelityExport by rememberUpdatedState(awaitingFidelityExport)
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let { selectedUri = it; viewModel.parseFile(it) }
+        uri?.let(viewModel::parseFile)
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && currentAwaitingFidelityExport) {
+                awaitingFidelityExport = false
+                filePicker.launch("text/*")
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(importState) {
@@ -54,11 +75,21 @@ fun CsvImportScreen(
         snackbarHost = { SnackbarHost(snackbarHost) },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("Sign in through Fidelity's website, export your positions, then reconcile the downloaded CSV.", style = MaterialTheme.typography.bodyMedium)
-            Text("Supported columns: Symbol, Last, Bid, Chg, Ask, Tdy G/L, Quantity, Volume, Day Range, 52 Wk Range, Purchase Price, Value, % Tdy G/L, G/L, % G/L, Account, Close Value, Earnings Date, Div Date, Prev Close", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Logging in alone does not transfer positions. Fidelity must export a CSV for StockStream to reconcile.", style = MaterialTheme.typography.bodyMedium)
+
+            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("How to sync", style = MaterialTheme.typography.titleMedium)
+                    Text("1. Tap Open Fidelity & Export.")
+                    Text("2. Sign in and open the Positions page.")
+                    Text("3. Use Fidelity's Download or Export control to save the positions CSV.")
+                    Text("4. Return to StockStream and select the downloaded CSV when prompted.")
+                    Text("5. Review the holdings, then confirm reconciliation.")
+                }
+            }
 
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -71,12 +102,22 @@ fun CsvImportScreen(
             }
 
             Button(
-                onClick = { uriHandler.openUri(FIDELITY_POSITIONS_URL) },
+                onClick = {
+                    awaitingFidelityExport = true
+                    try {
+                        uriHandler.openUri(FIDELITY_POSITIONS_URL)
+                    } catch (exception: IllegalArgumentException) {
+                        awaitingFidelityExport = false
+                        coroutineScope.launch {
+                            snackbarHost.showSnackbar("No browser is available to open Fidelity.")
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Default.OpenInBrowser, null)
                 Spacer(Modifier.width(8.dp))
-                Text("Open Fidelity Positions")
+                Text("Open Fidelity & Export")
             }
 
             OutlinedButton(
@@ -91,9 +132,11 @@ fun CsvImportScreen(
                 } else {
                     Icon(Icons.Default.FolderOpen, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Reconcile Downloaded CSV")
+                    Text("Choose CSV Manually")
                 }
             }
+
+            Text("The manual picker supports Fidelity and common broker CSV columns, including symbol, quantity, account, market value, and cost basis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
