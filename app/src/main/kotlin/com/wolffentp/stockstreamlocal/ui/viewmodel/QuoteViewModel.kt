@@ -111,7 +111,7 @@ class QuoteViewModel @Inject constructor(
         list.sortedWith { a, b ->
             val av = sortKey(a, col)
             val bv = sortKey(b, col)
-            compareNullable(av, bv).let { if (asc) it else -it }
+            compareSortValues(av, bv, asc)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -256,9 +256,9 @@ private fun sortKey(q: QuoteResult, column: String): Comparable<*>? = when (colu
 }
 
 @Suppress("UNCHECKED_CAST")
-private fun compareNullable(a: Comparable<*>?, b: Comparable<*>?): Int = when {
+internal fun compareSortValues(a: Comparable<*>?, b: Comparable<*>?, ascending: Boolean): Int = when {
     a == null && b == null -> 0
-    a == null -> 1      // nulls sort last
+    a == null -> 1
     b == null -> -1
-    else -> (a as Comparable<Any>).compareTo(b)
+    else -> (a as Comparable<Any>).compareTo(b).let { if (ascending) it else -it }
 }
