@@ -33,6 +33,7 @@ class ProviderFactory @Inject constructor(
         return when (providerType) {
             ProviderType.ALPHA_VANTAGE -> AlphaVantageProvider(apiKey = apiKey)
             ProviderType.FINNHUB -> FinnhubProvider(apiKey = apiKey)
+            ProviderType.COINBASE -> NullMarketDataProvider()
             ProviderType.NONE -> NullMarketDataProvider()
         }
     }
@@ -42,6 +43,7 @@ enum class ProviderType(val displayName: String) {
     NONE("None (not configured)"),
     ALPHA_VANTAGE("Alpha Vantage"),
     FINNHUB("Finnhub (Free Real-time)"),
+    COINBASE("Coinbase"),
 }
 
 /**

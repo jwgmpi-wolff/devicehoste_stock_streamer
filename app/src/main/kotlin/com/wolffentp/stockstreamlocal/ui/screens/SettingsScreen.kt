@@ -145,7 +145,7 @@ fun SettingsScreen(
             SettingsItem(
                 icon = Icons.Default.Cloud,
                 title = "Provider Settings",
-                subtitle = "Configure API key, select data provider (Finnhub, Alpha Vantage).",
+                subtitle = "Configure API credentials and select a data provider.",
                 onClick = onNavigateToProviderSettings,
             )
 

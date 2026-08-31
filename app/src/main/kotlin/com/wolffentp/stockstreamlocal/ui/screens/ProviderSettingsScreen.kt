@@ -29,14 +29,15 @@ class ProviderSettingsViewModel @Inject constructor(
     val providerType = providerRepository.observeProviderType()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProviderType.NONE)
     val maskedApiKey get() = providerRepository.getApiKeyMasked()
+    val maskedApiKeyName get() = providerRepository.getApiKeyNameMasked()
     val isConfigured get() = providerRepository.isProviderConfigured()
 
     private val _saved = MutableStateFlow(false)
     val saved: StateFlow<Boolean> = _saved.asStateFlow()
 
-    fun save(type: ProviderType, apiKey: String) {
+    fun save(type: ProviderType, apiKey: String, apiKeyName: String = "") {
         viewModelScope.launch {
-            providerRepository.saveProviderConfig(type, apiKey)
+            providerRepository.saveProviderConfig(type, apiKey, apiKeyName)
             _saved.value = true
         }
     }
@@ -53,6 +54,7 @@ fun ProviderSettingsScreen(
     val saved by viewModel.saved.collectAsStateWithLifecycle()
     var selectedType by remember(currentType) { mutableStateOf(currentType) }
     var apiKey by remember { mutableStateOf("") }
+    var apiKeyName by remember { mutableStateOf("") }
     val snackbarHost = remember { SnackbarHostState() }
 
     LaunchedEffect(saved) { if (saved) { snackbarHost.showSnackbar("Provider saved."); onNavigateBack() } }
@@ -83,6 +85,18 @@ fun ProviderSettingsScreen(
             }
 
             if (selectedType != ProviderType.NONE) {
+                if (selectedType == ProviderType.COINBASE) {
+                    Text("Current API key name: ${viewModel.maskedApiKeyName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedTextField(
+                        value = apiKeyName,
+                        onValueChange = { apiKeyName = it },
+                        label = { Text("API Key Name") },
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        supportingText = { Text("Leave blank to keep the existing API key name.") },
+                    )
+                }
                 Text("Current key: ${viewModel.maskedApiKey}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(
                     value = apiKey,
@@ -90,7 +104,8 @@ fun ProviderSettingsScreen(
                     label = { Text("API Key") },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
-                    singleLine = true,
+                    singleLine = selectedType != ProviderType.COINBASE,
+                    maxLines = if (selectedType == ProviderType.COINBASE) 6 else 1,
                     modifier = Modifier.fillMaxWidth(),
                     supportingText = { Text("Leave blank to keep existing key.") },
                 )
@@ -104,7 +119,7 @@ fun ProviderSettingsScreen(
             }
 
             Button(
-                onClick = { viewModel.save(selectedType, apiKey) },
+                onClick = { viewModel.save(selectedType, apiKey, apiKeyName) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Save") }
 

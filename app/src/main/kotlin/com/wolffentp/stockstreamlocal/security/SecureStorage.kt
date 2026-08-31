@@ -13,6 +13,7 @@ import javax.inject.Singleton
 
 private const val PREFS_FILE = "stockstream_secure_prefs"
 private const val KEY_API_KEY = "provider_api_key"
+private const val KEY_API_KEY_NAME = "provider_api_key_name"
 private const val KEY_PROVIDER_TYPE = "provider_type"
 private const val KEY_PIN_HASH = "pin_hash"
 private const val KEY_PIN_SALT = "pin_salt"
@@ -66,6 +67,16 @@ class SecureStorage @Inject constructor(
 
     fun clearApiKey() {
         prefs.edit().remove(KEY_API_KEY).apply()
+    }
+
+    fun saveApiKeyName(apiKeyName: String) {
+        prefs.edit().putString(KEY_API_KEY_NAME, apiKeyName).apply()
+    }
+
+    fun getApiKeyName(): String? = prefs.getString(KEY_API_KEY_NAME, null)
+
+    fun clearApiKeyName() {
+        prefs.edit().remove(KEY_API_KEY_NAME).apply()
     }
 
     // ─── Provider type ─────────────────────────────────────────────────────────

@@ -19,15 +19,17 @@ class ProviderRepository @Inject constructor(
             ?: ProviderType.NONE
     }
 
-    suspend fun saveProviderConfig(type: ProviderType, apiKey: String) {
+    suspend fun saveProviderConfig(type: ProviderType, apiKey: String, apiKeyName: String = "") {
         dao.upsert(ProviderConfigEntity(providerType = type.name))
         secureStorage.saveProviderType(type.name)
         if (apiKey.isNotBlank()) secureStorage.saveApiKey(apiKey)
+        if (apiKeyName.isNotBlank()) secureStorage.saveApiKeyName(apiKeyName)
     }
 
     suspend fun clearProviderConfig() {
         dao.deleteAll()
         secureStorage.clearApiKey()
+        secureStorage.clearApiKeyName()
         secureStorage.saveProviderType(ProviderType.NONE.name)
     }
 
@@ -36,6 +38,16 @@ class ProviderRepository @Inject constructor(
         return if (key.length <= 8) "****" else "****${key.takeLast(4)}"
     }
 
-    fun isProviderConfigured(): Boolean =
-        secureStorage.getProviderType() != null && secureStorage.getApiKey() != null
+    fun getApiKeyNameMasked(): String {
+        val name = secureStorage.getApiKeyName() ?: return "(not set)"
+        return if (name.length <= 8) "****" else "****${name.takeLast(4)}"
+    }
+
+    fun isProviderConfigured(): Boolean {
+        val type = runCatching {
+            ProviderType.valueOf(secureStorage.getProviderType() ?: return false)
+        }.getOrElse { return false }
+        return secureStorage.getApiKey() != null &&
+            (type != ProviderType.COINBASE || secureStorage.getApiKeyName() != null)
+    }
 }

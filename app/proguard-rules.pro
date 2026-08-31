@@ -25,6 +25,12 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
+# Optional compile-time annotations referenced by Tink
+-dontwarn com.google.errorprone.annotations.CanIgnoreReturnValue
+-dontwarn com.google.errorprone.annotations.CheckReturnValue
+-dontwarn com.google.errorprone.annotations.Immutable
+-dontwarn com.google.errorprone.annotations.RestrictedApi
+
 # Hilt
 -keepclasseswithmembernames class * {
     @dagger.hilt.* <fields>;
