@@ -1,7 +1,9 @@
 package com.wolffentp.stockstreamlocal.ui.screens
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -69,7 +71,7 @@ fun ProviderSettingsScreen(
         snackbarHost = { SnackbarHost(snackbarHost) },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text("Configure the market data provider used for live quotes.", style = MaterialTheme.typography.bodyMedium)
@@ -101,7 +103,7 @@ fun ProviderSettingsScreen(
                 OutlinedTextField(
                     value = apiKey,
                     onValueChange = { apiKey = it },
-                    label = { Text("API Key") },
+                    label = { Text(if (selectedType == ProviderType.COINBASE) "API Private Key" else "API Key") },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
                     singleLine = selectedType != ProviderType.COINBASE,
