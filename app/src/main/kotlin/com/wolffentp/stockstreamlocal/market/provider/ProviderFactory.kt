@@ -33,7 +33,7 @@ class ProviderFactory @Inject constructor(
         return when (providerType) {
             ProviderType.ALPHA_VANTAGE -> AlphaVantageProvider(apiKey = apiKey)
             ProviderType.FINNHUB -> FinnhubProvider(apiKey = apiKey)
-            ProviderType.COINBASE -> NullMarketDataProvider()
+            ProviderType.COINBASE -> CoinbaseProvider()
             ProviderType.NONE -> NullMarketDataProvider()
         }
     }
