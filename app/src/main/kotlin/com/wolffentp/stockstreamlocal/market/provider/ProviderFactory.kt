@@ -34,6 +34,7 @@ class ProviderFactory @Inject constructor(
             ProviderType.ALPHA_VANTAGE -> AlphaVantageProvider(apiKey = apiKey)
             ProviderType.FINNHUB -> FinnhubProvider(apiKey = apiKey)
             ProviderType.COINBASE -> CoinbaseProvider()
+            ProviderType.CUSTOM -> NullMarketDataProvider()
             ProviderType.NONE -> NullMarketDataProvider()
         }
     }
@@ -44,6 +45,7 @@ enum class ProviderType(val displayName: String) {
     ALPHA_VANTAGE("Alpha Vantage"),
     FINNHUB("Finnhub (Free Real-time)"),
     COINBASE("Coinbase"),
+    CUSTOM("Add custom provider"),
 }
 
 /**

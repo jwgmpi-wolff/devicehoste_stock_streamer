@@ -93,6 +93,20 @@ Do not paste a brokerage password, brokerage token, or a key from a different pr
 providers, repeat these steps with the new provider and its matching key. Use **Clear Provider
 Config** to remove the saved provider credentials from the device.
 
+### Save a custom provider API key
+
+In **Settings > Provider Settings**, select **Add custom provider**, enter the **Provider Name**
+and **API Key**, then select **Save**. The name and key are stored locally in encrypted preferences.
+Reopen Provider Settings to update the name or key; leave the key blank to retain it only when
+keeping the same provider name. Switching providers or renaming a custom provider requires a new
+key so credentials are not reused for a different service. Only one provider configuration is saved
+at a time; saving a different provider replaces it. **Clear Provider Config** removes the saved
+name and credentials.
+
+Custom providers currently support credential storage only. Saving a name and key does not
+enable quotes or streaming: each provider requires a compatible API integration in the app.
+Select a built-in provider to fetch market data.
+
 ### Local debug-key option
 
 Create or update the ignored `local.properties` file:

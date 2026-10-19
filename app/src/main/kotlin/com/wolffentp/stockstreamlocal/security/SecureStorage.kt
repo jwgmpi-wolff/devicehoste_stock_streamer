@@ -15,6 +15,7 @@ private const val PREFS_FILE = "stockstream_secure_prefs"
 private const val KEY_API_KEY = "provider_api_key"
 private const val KEY_API_KEY_NAME = "provider_api_key_name"
 private const val KEY_PROVIDER_TYPE = "provider_type"
+private const val KEY_CUSTOM_PROVIDER_NAME = "custom_provider_name"
 private const val KEY_PIN_HASH = "pin_hash"
 private const val KEY_PIN_SALT = "pin_salt"
 private const val KEY_IS_PIN_SET = "is_pin_set"
@@ -86,6 +87,16 @@ class SecureStorage @Inject constructor(
     }
 
     fun getProviderType(): String? = prefs.getString(KEY_PROVIDER_TYPE, null)
+
+    fun saveCustomProviderName(name: String) {
+        prefs.edit().putString(KEY_CUSTOM_PROVIDER_NAME, name).apply()
+    }
+
+    fun getCustomProviderName(): String? = prefs.getString(KEY_CUSTOM_PROVIDER_NAME, null)
+
+    fun clearCustomProviderName() {
+        prefs.edit().remove(KEY_CUSTOM_PROVIDER_NAME).apply()
+    }
 
     // ─── PIN ───────────────────────────────────────────────────────────────────
 

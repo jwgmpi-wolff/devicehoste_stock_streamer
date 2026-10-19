@@ -32,15 +32,28 @@ class ProviderSettingsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProviderType.NONE)
     val maskedApiKey get() = providerRepository.getApiKeyMasked()
     val maskedApiKeyName get() = providerRepository.getApiKeyNameMasked()
-    val isConfigured get() = providerRepository.isProviderConfigured()
+    val customProviderName get() = providerRepository.getCustomProviderName()
 
     private val _saved = MutableStateFlow(false)
     val saved: StateFlow<Boolean> = _saved.asStateFlow()
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
 
-    fun save(type: ProviderType, apiKey: String, apiKeyName: String = "") {
+    fun save(type: ProviderType, apiKey: String, apiKeyName: String = "", customProviderName: String = "") {
         viewModelScope.launch {
-            providerRepository.saveProviderConfig(type, apiKey, apiKeyName)
-            _saved.value = true
+            _error.value = null
+            try {
+                providerRepository.saveProviderConfig(type, apiKey, apiKeyName, customProviderName)
+                _saved.value = true
+            } catch (e: IllegalArgumentException) {
+                _error.value = e.message
+            } catch (e: java.io.IOException) {
+                _error.value = "Unable to save provider credentials. Please try again."
+            } catch (e: java.security.GeneralSecurityException) {
+                _error.value = "Unable to encrypt provider credentials."
+            } catch (e: android.database.sqlite.SQLiteException) {
+                _error.value = "Unable to save provider settings. Please try again."
+            }
         }
     }
     fun clear() { viewModelScope.launch { providerRepository.clearProviderConfig() } }
@@ -54,9 +67,13 @@ fun ProviderSettingsScreen(
 ) {
     val currentType by viewModel.providerType.collectAsStateWithLifecycle()
     val saved by viewModel.saved.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
     var selectedType by remember(currentType) { mutableStateOf(currentType) }
-    var apiKey by remember { mutableStateOf("") }
-    var apiKeyName by remember { mutableStateOf("") }
+    var apiKey by remember(selectedType) { mutableStateOf("") }
+    var apiKeyName by remember(selectedType) { mutableStateOf("") }
+    var customProviderName by remember(currentType) { mutableStateOf(viewModel.customProviderName) }
+    val keepingProvider = selectedType == currentType &&
+        (selectedType != ProviderType.CUSTOM || customProviderName.trim() == viewModel.customProviderName)
     val snackbarHost = remember { SnackbarHostState() }
 
     LaunchedEffect(saved) { if (saved) { snackbarHost.showSnackbar("Provider saved."); onNavigateBack() } }
@@ -87,8 +104,22 @@ fun ProviderSettingsScreen(
             }
 
             if (selectedType != ProviderType.NONE) {
+                if (selectedType == ProviderType.CUSTOM) {
+                    OutlinedTextField(
+                        value = customProviderName,
+                        onValueChange = { customProviderName = it },
+                        label = { Text("Provider Name") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        "Custom credentials are saved securely on this device. Quotes and streaming are not available until an API integration is added for this provider.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
                 if (selectedType == ProviderType.COINBASE) {
-                    Text("Current API key name: ${viewModel.maskedApiKeyName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Current API key name: ${if (keepingProvider) viewModel.maskedApiKeyName else "(not set)"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedTextField(
                         value = apiKeyName,
                         onValueChange = { apiKeyName = it },
@@ -96,10 +127,10 @@ fun ProviderSettingsScreen(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
-                        supportingText = { Text("Leave blank to keep the existing API key name.") },
+                        supportingText = { Text(if (keepingProvider) "Leave blank to keep the existing API key name." else "Enter the API key name for this provider.") },
                     )
                 }
-                Text("Current key: ${viewModel.maskedApiKey}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Current key: ${if (keepingProvider) viewModel.maskedApiKey else "(not set)"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(
                     value = apiKey,
                     onValueChange = { apiKey = it },
@@ -109,7 +140,7 @@ fun ProviderSettingsScreen(
                     singleLine = selectedType != ProviderType.COINBASE,
                     maxLines = if (selectedType == ProviderType.COINBASE) 6 else 1,
                     modifier = Modifier.fillMaxWidth(),
-                    supportingText = { Text("Leave blank to keep existing key.") },
+                    supportingText = { Text(if (keepingProvider) "Leave blank to keep existing key." else "Enter an API key for this provider.") },
                 )
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
                     Text(
@@ -120,12 +151,14 @@ fun ProviderSettingsScreen(
                 }
             }
 
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+
             Button(
-                onClick = { viewModel.save(selectedType, apiKey, apiKeyName) },
+                onClick = { viewModel.save(selectedType, apiKey, apiKeyName, customProviderName) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Save") }
 
-            if (viewModel.isConfigured) {
+            if (currentType != ProviderType.NONE) {
                 OutlinedButton(
                     onClick = { viewModel.clear() },
                     modifier = Modifier.fillMaxWidth(),

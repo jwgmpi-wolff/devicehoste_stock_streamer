@@ -19,17 +19,51 @@ class ProviderRepository @Inject constructor(
             ?: ProviderType.NONE
     }
 
-    suspend fun saveProviderConfig(type: ProviderType, apiKey: String, apiKeyName: String = "") {
-        dao.upsert(ProviderConfigEntity(providerType = type.name))
+    fun getCustomProviderName(): String = secureStorage.getCustomProviderName().orEmpty()
+
+    suspend fun saveProviderConfig(
+        type: ProviderType,
+        apiKey: String,
+        apiKeyName: String = "",
+        customProviderName: String = "",
+    ) {
+        if (type == ProviderType.NONE) {
+            clearProviderConfig()
+            return
+        }
+        val name = customProviderName.trim()
+        val sameProvider = secureStorage.getProviderType() == type.name &&
+            (type != ProviderType.CUSTOM || name == getCustomProviderName())
+        require(type != ProviderType.CUSTOM || name.isNotBlank()) {
+            "Enter a custom provider name."
+        }
+        require(apiKey.isNotBlank() || (sameProvider && !secureStorage.getApiKey().isNullOrBlank())) {
+            "Enter an API key for the selected provider."
+        }
+        require(type != ProviderType.COINBASE || apiKeyName.isNotBlank() ||
+            (sameProvider && !secureStorage.getApiKeyName().isNullOrBlank())) {
+            "Enter the Coinbase API key name."
+        }
+        if (!sameProvider) {
+            secureStorage.clearApiKey()
+            secureStorage.clearApiKeyName()
+        }
         secureStorage.saveProviderType(type.name)
         if (apiKey.isNotBlank()) secureStorage.saveApiKey(apiKey)
         if (apiKeyName.isNotBlank()) secureStorage.saveApiKeyName(apiKeyName)
+        if (type == ProviderType.CUSTOM) {
+            secureStorage.saveCustomProviderName(name)
+        } else {
+            secureStorage.clearCustomProviderName()
+        }
+        dao.upsert(ProviderConfigEntity(providerType = type.name))
     }
 
     suspend fun clearProviderConfig() {
         dao.deleteAll()
         secureStorage.clearApiKey()
         secureStorage.clearApiKeyName()
+        secureStorage.clearCustomProviderName()
         secureStorage.saveProviderType(ProviderType.NONE.name)
     }
 
@@ -47,7 +81,8 @@ class ProviderRepository @Inject constructor(
         val type = runCatching {
             ProviderType.valueOf(secureStorage.getProviderType() ?: return false)
         }.getOrElse { return false }
-        return secureStorage.getApiKey() != null &&
+        return type != ProviderType.NONE && type != ProviderType.CUSTOM &&
+            !secureStorage.getApiKey().isNullOrBlank() &&
             (type != ProviderType.COINBASE || secureStorage.getApiKeyName() != null)
     }
 }
