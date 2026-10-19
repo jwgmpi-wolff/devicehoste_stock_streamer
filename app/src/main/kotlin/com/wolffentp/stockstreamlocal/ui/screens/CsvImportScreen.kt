@@ -60,6 +60,12 @@ fun CsvImportScreen(
     LaunchedEffect(importState) {
         when (val s = importState) {
             is ImportState.Parsed -> if (s.result is CsvImportResult.Success) onNavigateToValidation()
+                else when (val result = s.result) {
+                    is CsvImportResult.HeaderError -> snackbarHost.showSnackbar("Missing required columns: ${result.missingColumns.joinToString()}")
+                    is CsvImportResult.ParseError -> snackbarHost.showSnackbar(result.message)
+                    is CsvImportResult.EmptyFile -> snackbarHost.showSnackbar(result.message)
+                    else -> {}
+                }
             is ImportState.Error -> snackbarHost.showSnackbar(s.message)
             else -> {}
         }
@@ -136,7 +142,7 @@ fun CsvImportScreen(
                 }
             }
 
-            Text("The manual picker supports Fidelity and common broker CSV columns, including symbol, quantity, account, market value, and cost basis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("The manual picker supports Fidelity and common broker positions, plus Coinbase transaction-history CSV exports. Coinbase requires complete history to estimate remaining holdings and cost basis.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

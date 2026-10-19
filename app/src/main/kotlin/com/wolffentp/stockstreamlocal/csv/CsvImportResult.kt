@@ -1,5 +1,10 @@
 package com.wolffentp.stockstreamlocal.csv
 
+enum class CsvImportFormat {
+    BROKER_POSITIONS,
+    COINBASE_TRANSACTIONS,
+}
+
 sealed class CsvImportResult {
     data class Success(
         val rows: List<Map<String, String>>,
@@ -9,6 +14,7 @@ sealed class CsvImportResult {
         val detectedHeaders: List<String>,
         val missingOptionalColumns: List<String>,
         val isAllAccountsSnapshot: Boolean,
+        val format: CsvImportFormat,
     ) : CsvImportResult()
 
     data class HeaderError(

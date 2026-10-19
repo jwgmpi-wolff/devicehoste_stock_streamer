@@ -151,4 +151,20 @@ class CsvParserTest {
         assertEquals("Brokerage", row[CsvColumns.ACCOUNT])
         assertFalse(result.isAllAccountsSnapshot)
     }
+
+    @Test
+    fun `detects Coinbase transaction history and normalizes legacy headers`() {
+        val csv = """
+            You can use this transaction report for tax purposes.
+            Timestamp,Transaction Type,Asset,Quantity Transacted,Price Currency,Price at Transaction,Subtotal,Total (inclusive of fees),Fees,Notes
+            2026-01-02T12:00:00Z,Buy,BTC,0.01,USD,50000,500,505,5,Purchase
+        """.trimIndent()
+
+        val result = parser.parse(csv.byteInputStream()) as CsvImportResult.Success
+
+        assertEquals(CsvImportFormat.COINBASE_TRANSACTIONS, result.format)
+        assertEquals("BTC", result.rows.single()[CoinbaseCsvColumns.ASSET])
+        assertEquals("50000", result.rows.single()[CoinbaseCsvColumns.SPOT_PRICE])
+        assertEquals("505", result.rows.single()[CoinbaseCsvColumns.TOTAL])
+    }
 }

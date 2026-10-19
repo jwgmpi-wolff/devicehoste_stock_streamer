@@ -23,7 +23,8 @@ val localProperties = Properties().apply {
         load(localPropertiesFile.inputStream())
     }
 }
-val defaultProviderApiKey = localProperties.getProperty("provider.apiKey", "")
+val defaultProviderApiKey = (if (providers.gradleProperty("excludeProviderApiKey").orNull == "true") ""
+    else localProperties.getProperty("provider.apiKey", ""))
     .replace("\\", "\\\\")
     .replace("\"", "\\\"")
 
@@ -35,8 +36,8 @@ android {
         applicationId = "com.wolffentp.android_stock_tracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 9
-        versionName = "1.0.8"
+        versionCode = 10
+        versionName = "1.0.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

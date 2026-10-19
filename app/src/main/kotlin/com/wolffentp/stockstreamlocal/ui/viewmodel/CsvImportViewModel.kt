@@ -4,6 +4,9 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.wolffentp.stockstreamlocal.csv.CsvImportResult
+import com.wolffentp.stockstreamlocal.csv.CsvImportFormat
+import com.wolffentp.stockstreamlocal.csv.CoinbaseCsvMapper
+import com.wolffentp.stockstreamlocal.csv.COINBASE_CSV_SOURCE
 import com.wolffentp.stockstreamlocal.csv.CsvParser
 import com.wolffentp.stockstreamlocal.csv.FidelityCsvMapper
 import com.wolffentp.stockstreamlocal.data.repository.PortfolioRepository
@@ -17,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -26,6 +30,7 @@ class CsvImportViewModel @Inject constructor(
     private val csvMapper: FidelityCsvMapper,
     private val portfolioRepository: PortfolioRepository,
     private val tickerRepository: TickerRepository,
+    private val coinbaseCsvMapper: CoinbaseCsvMapper,
 ) : ViewModel() {
 
     private val _importState = MutableStateFlow<ImportState>(ImportState.Idle)
@@ -38,28 +43,45 @@ class CsvImportViewModel @Inject constructor(
                 val stream = context.contentResolver.openInputStream(uri)
                     ?: return@launch run { _importState.value = ImportState.Error("Cannot open file.") }
                 val fileName = uri.lastPathSegment ?: "unknown.csv"
-                val result = csvParser.parse(stream)
+                val result = stream.use { csvParser.parse(it) }
                 withContext(Dispatchers.Main) {
                     _importState.value = ImportState.Parsed(result, fileName)
                 }
-            } catch (e: Exception) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: java.io.IOException) {
                 _importState.value = ImportState.Error("Parse failed: ${e.message}")
+            } catch (e: SecurityException) {
+                _importState.value = ImportState.Error("Permission to read the selected file was denied.")
             }
         }
     }
 
     fun confirmImport(result: CsvImportResult.Success, fileName: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val lots = csvMapper.mapRows(result.rows, fileName)
-            portfolioRepository.importLots(lots, replaceAllImported = result.isAllAccountsSnapshot)
-            // Offer watchlist addition for valid symbols
-            val newSymbols = lots.map { it.symbol }.distinct()
-            val symbols = newSymbols.filter { tickerRepository.getBySymbol(it) == null }
-            withContext(Dispatchers.Main) {
-                _importState.value = ImportState.Imported(
-                    importedCount = lots.size,
-                    newSymbols = symbols,
+            try {
+                val isCoinbase = result.format == CsvImportFormat.COINBASE_TRANSACTIONS
+                val lots = when (result.format) {
+                    CsvImportFormat.COINBASE_TRANSACTIONS -> coinbaseCsvMapper.mapRows(result.rows)
+                    CsvImportFormat.BROKER_POSITIONS -> csvMapper.mapRows(result.rows, fileName)
+                }
+                portfolioRepository.importLots(
+                    lots,
+                    replaceAllImported = result.isAllAccountsSnapshot && !isCoinbase,
+                    replaceImportedSource = if (isCoinbase) COINBASE_CSV_SOURCE else null,
                 )
+                val newSymbols = lots.map { it.symbol }.distinct()
+                val symbols = newSymbols.filter { tickerRepository.getBySymbol(it) == null }
+                withContext(Dispatchers.Main) {
+                    _importState.value = ImportState.Imported(
+                        importedCount = lots.size,
+                        newSymbols = symbols,
+                    )
+                }
+            } catch (e: IllegalArgumentException) {
+                _importState.value = ImportState.Error(e.message ?: "Invalid import data.")
+            } catch (e: android.database.sqlite.SQLiteException) {
+                _importState.value = ImportState.Error("Unable to save imported holdings. Please try again.")
             }
         }
     }

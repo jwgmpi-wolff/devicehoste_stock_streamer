@@ -1,6 +1,6 @@
 # StockStream Local
 
-[Download StockStream Local 1.0.8](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.8/StockStreamLocal-debug.apk)
+[Download StockStream Local 1.0.9](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.9/StockStreamLocal-debug.apk)
 
 StockStream Local is a private, device-first Android portfolio and quote tracker. It calls the selected market-data provider directly, stores portfolio data locally, and labels every displayed value as live, delayed, stale, imported, calculated, unavailable, or not provided.
 
@@ -133,6 +133,15 @@ Logging in alone does not transfer holdings. Fidelity must export the CSV becaus
 no backend and cannot access browser cookies or brokerage credentials. The CSV is parsed and stored
 only on the device. Use **Choose CSV Manually** if the automatic picker is dismissed.
 
+### Import Coinbase transaction history
+
+Use **Import > Choose CSV Manually** to select a Coinbase transaction-history export with
+Transaction Type, Asset, and Quantity Transacted columns. Review validation, then confirm.
+Import complete history: the app estimates remaining balances and average cost after disposals,
+not tax lots. Historical transaction prices are imported baselines, never live quotes.
+Reimporting replaces only prior Coinbase transaction-history holdings, including assets whose
+balances have reached zero; other broker holdings and manual entries are preserved.
+
 ## Build and test
 
 ```powershell
@@ -142,9 +151,19 @@ only on the device. Use **Choose CSV Manually** if the automatic picker is dismi
 
 The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
+For distributable APKs, explicitly exclude the local debug API key:
+
+```powershell
+.\gradlew.bat -PexcludeProviderApiKey=true :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease :app:lintDebug
+```
+
+Release APK signing requires the local, ignored `keystore.properties` and keystore.
+
 ## Download APK
 
-[Download StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.8/StockStreamLocal-debug.apk)
+[Download StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.9/StockStreamLocal-debug.apk)
+
+[Download StockStreamLocal-release.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.9/StockStreamLocal-release.apk)
 
 This is a locally signed development APK for Android 8.0 and newer. It contains no imported portfolio database or market-provider API key. Android may ask you to allow installation from your browser or file manager; configure your provider in the app after installation. GitHub Actions validates builds but does not publish APKs because the private signing key is intentionally excluded from the repository.
 

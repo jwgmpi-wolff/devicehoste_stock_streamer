@@ -25,10 +25,15 @@ interface PortfolioLotDao {
     suspend fun insertAll(lots: List<PortfolioLotEntity>)
 
     @Transaction
-    suspend fun reconcileImported(lots: List<PortfolioLotEntity>, replaceAllImported: Boolean = false) {
+    suspend fun reconcileImported(
+        lots: List<PortfolioLotEntity>,
+        replaceAllImported: Boolean = false,
+        replaceImportedSource: String? = null,
+    ) {
         if (replaceAllImported) {
             deleteAllImported()
         } else {
+            replaceImportedSource?.let { deleteImportedBySourceFile(it) }
             lots.map { it.sourceFileName }.filter { it.isNotBlank() }.distinct().forEach { sourceFileName ->
                 deleteImportedBySourceFile(sourceFileName)
             }

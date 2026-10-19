@@ -13,8 +13,11 @@ class PortfolioRepository @Inject constructor(private val dao: PortfolioLotDao) 
     fun observeBySymbol(symbol: String): Flow<List<PortfolioLotEntity>> = dao.observeBySymbol(symbol)
     fun observeByAccount(account: String): Flow<List<PortfolioLotEntity>> = dao.observeByAccount(account)
 
-    suspend fun importLots(lots: List<PortfolioLotEntity>, replaceAllImported: Boolean = false) =
-        dao.reconcileImported(lots, replaceAllImported)
+    suspend fun importLots(
+        lots: List<PortfolioLotEntity>,
+        replaceAllImported: Boolean = false,
+        replaceImportedSource: String? = null,
+    ) = dao.reconcileImported(lots, replaceAllImported, replaceImportedSource)
     suspend fun replaceSymbolHolding(lot: PortfolioLotEntity) = dao.replaceSymbol(lot)
     suspend fun deleteLot(id: Long) = dao.deleteById(id)
     suspend fun clearAll() = dao.deleteAll()

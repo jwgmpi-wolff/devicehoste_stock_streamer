@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.wolffentp.stockstreamlocal.csv.CsvImportResult
+import com.wolffentp.stockstreamlocal.csv.CsvImportFormat
 import com.wolffentp.stockstreamlocal.ui.viewmodel.CsvImportViewModel
 import com.wolffentp.stockstreamlocal.ui.viewmodel.ImportState
 
@@ -33,6 +34,7 @@ fun ImportValidationScreen(
                 if (s.newSymbols.isNotEmpty()) { newSymbols = s.newSymbols; showAddSymbolsDialog = true }
                 else snackbarHost.showSnackbar("Imported ${s.importedCount} rows.")
             }
+            is ImportState.Error -> snackbarHost.showSnackbar(s.message)
             else -> {}
         }
     }
@@ -59,7 +61,8 @@ fun ImportValidationScreen(
                                 Text("File: $fileName", style = MaterialTheme.typography.bodySmall)
                                 Text("Valid rows: ${result.validRows} / ${result.totalRows}", style = MaterialTheme.typography.bodySmall)
                                 Text(
-                                    if (result.isAllAccountsSnapshot) "Reconciliation: replace prior imported holdings (all accounts)"
+                                    if (result.format == CsvImportFormat.COINBASE_TRANSACTIONS) "Reconciliation: replace prior Coinbase transaction-history holdings only. Import complete history; balances and average costs are estimates, not tax lots. Values use historical transaction prices."
+                                    else if (result.isAllAccountsSnapshot) "Reconciliation: replace prior imported holdings (all accounts)"
                                     else "Reconciliation: update matching imported holdings",
                                     style = MaterialTheme.typography.bodySmall,
                                 )

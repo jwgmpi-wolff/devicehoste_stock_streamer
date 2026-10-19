@@ -28,9 +28,11 @@ class CsvParser @Inject constructor() {
 
         if (lines.isEmpty()) return CsvImportResult.EmptyFile()
 
-        // Find header row (first row that contains the SYMBOL column)
+        // Find either a positions header or a Coinbase transaction-history header.
         val headerLineIndex = lines.indexOfFirst { line ->
-            parseRow(line).any { normalizeHeader(it).equals(CsvColumns.SYMBOL, ignoreCase = true) }
+            val cells = parseRow(line)
+            cells.any { normalizeHeader(it).equals(CsvColumns.SYMBOL, ignoreCase = true) } ||
+                isCoinbaseHeader(cells)
         }
 
         if (headerLineIndex < 0) {
@@ -45,10 +47,28 @@ class CsvParser @Inject constructor() {
         }
 
         val rawHeaders = parseRow(lines[headerLineIndex]).map { it.trim() }
-        val headers = rawHeaders.map { normalizeHeader(it) }
+        val format = if (isCoinbaseHeader(rawHeaders)) {
+            CsvImportFormat.COINBASE_TRANSACTIONS
+        } else {
+            CsvImportFormat.BROKER_POSITIONS
+        }
+        val headers = rawHeaders.map { raw ->
+            if (format == CsvImportFormat.COINBASE_TRANSACTIONS) normalizeCoinbaseHeader(raw)
+            else normalizeHeader(raw)
+        }
 
         // Check required columns
-        val missingRequired = CsvColumns.REQUIRED_COLUMNS.filter { req ->
+        val requiredColumns = if (format == CsvImportFormat.COINBASE_TRANSACTIONS) {
+            CoinbaseCsvColumns.REQUIRED_COLUMNS
+        } else {
+            CsvColumns.REQUIRED_COLUMNS
+        }
+        val optionalColumns = if (format == CsvImportFormat.COINBASE_TRANSACTIONS) {
+            CoinbaseCsvColumns.OPTIONAL_COLUMNS
+        } else {
+            CsvColumns.ALL_COLUMNS.filter { it !in CsvColumns.REQUIRED_COLUMNS }
+        }
+        val missingRequired = requiredColumns.filter { req ->
             headers.none { h -> h.equals(req, ignoreCase = true) }
         }
         if (missingRequired.isNotEmpty()) {
@@ -58,9 +78,8 @@ class CsvParser @Inject constructor() {
             )
         }
 
-        val missingOptional = CsvColumns.ALL_COLUMNS.filter { col ->
-            col !in CsvColumns.REQUIRED_COLUMNS &&
-                    headers.none { h -> h.equals(col, ignoreCase = true) }
+        val missingOptional = optionalColumns.filter { col ->
+            headers.none { h -> h.equals(col, ignoreCase = true) }
         }
 
         val dataLines = lines.drop(headerLineIndex + 1)
@@ -72,19 +91,25 @@ class CsvParser @Inject constructor() {
             val cells = parseRow(line)
             if (cells.none { it.isNotBlank() }) return@forEachIndexed
 
-            val rawSymbol = cells.getOrNull(
-                headers.indexOfFirst { it.equals(CsvColumns.SYMBOL, ignoreCase = true) }
+            val identityColumn = if (format == CsvImportFormat.COINBASE_TRANSACTIONS) {
+                CoinbaseCsvColumns.ASSET
+            } else {
+                CsvColumns.SYMBOL
+            }
+            val rawIdentity = cells.getOrNull(
+                headers.indexOfFirst { it.equals(identityColumn, ignoreCase = true) }
             )?.trim()
 
-            if (rawSymbol.isNullOrBlank()) {
-                rowErrors.add(RowError(rowIndex = idx + headerLineIndex + 2, reason = "Missing symbol"))
+            if (rawIdentity.isNullOrBlank()) {
+                rowErrors.add(RowError(rowIndex = idx + headerLineIndex + 2, reason = "Missing ${identityColumn.lowercase()}"))
                 return@forEachIndexed
             }
 
             // Skip Fidelity subtotal/total rows
-            if (rawSymbol.startsWith("--") || rawSymbol.equals("Subtotal", ignoreCase = true) ||
-                rawSymbol.equals("Account Total", ignoreCase = true) ||
-                rawSymbol.equals("TOTALS", ignoreCase = true)) {
+            if (format == CsvImportFormat.BROKER_POSITIONS &&
+                (rawIdentity.startsWith("--") || rawIdentity.equals("Subtotal", ignoreCase = true) ||
+                    rawIdentity.equals("Account Total", ignoreCase = true) ||
+                    rawIdentity.equals("TOTALS", ignoreCase = true))) {
                 return@forEachIndexed
             }
 
@@ -92,7 +117,9 @@ class CsvParser @Inject constructor() {
             headers.forEachIndexed { colIdx, header ->
                 row[header] = cells.getOrElse(colIdx) { "" }.trim()
             }
-            row[CsvColumns.SYMBOL] = normalizeFidelitySymbol(rawSymbol)
+            if (format == CsvImportFormat.BROKER_POSITIONS) {
+                row[CsvColumns.SYMBOL] = normalizeFidelitySymbol(rawIdentity)
+            }
             rows.add(row)
         }
 
@@ -104,6 +131,7 @@ class CsvParser @Inject constructor() {
             detectedHeaders = rawHeaders,
             missingOptionalColumns = missingOptional,
             isAllAccountsSnapshot = isAllAccountsSnapshot,
+            format = format,
         )
     }
 
@@ -149,6 +177,20 @@ class CsvParser @Inject constructor() {
         }?.key ?: header
     }
 
+    private fun isCoinbaseHeader(cells: List<String>): Boolean {
+        val headers = cells.map(::normalizeCoinbaseHeader)
+        return CoinbaseCsvColumns.REQUIRED_COLUMNS.all { required ->
+            headers.any { it.equals(required, ignoreCase = true) }
+        }
+    }
+
+    private fun normalizeCoinbaseHeader(raw: String): String {
+        val header = raw.trimStart('\uFEFF').trim()
+        return COINBASE_HEADER_ALIASES.entries.firstOrNull { (_, aliases) ->
+            aliases.any { it.equals(header, ignoreCase = true) }
+        }?.key ?: header
+    }
+
     private fun normalizeFidelitySymbol(raw: String): String =
         raw.replace(Regex("\\s*\\(Core account\\)\\s*$", RegexOption.IGNORE_CASE), "").trim()
 
@@ -168,6 +210,18 @@ class CsvParser @Inject constructor() {
             CsvColumns.PCT_TDY_GAIN_LOSS to setOf("% Tdy G/L", "Day Gain/Loss %", "Today's Gain/Loss %", "Daily Gain/Loss %"),
             CsvColumns.ACCOUNT to setOf("Account", "Account Name", "Account Number", "Portfolio"),
             CsvColumns.PREV_CLOSE to setOf("Prev Close", "Previous Close"),
+        )
+
+        val COINBASE_HEADER_ALIASES = mapOf(
+            CoinbaseCsvColumns.TIMESTAMP to setOf("Timestamp"),
+            CoinbaseCsvColumns.TRANSACTION_TYPE to setOf("Transaction Type"),
+            CoinbaseCsvColumns.ASSET to setOf("Asset"),
+            CoinbaseCsvColumns.QUANTITY to setOf("Quantity Transacted", "Quantity"),
+            CoinbaseCsvColumns.SPOT_PRICE_CURRENCY to setOf("Spot Price Currency", "Price Currency"),
+            CoinbaseCsvColumns.SPOT_PRICE to setOf("Spot Price at Transaction", "Price at Transaction"),
+            CoinbaseCsvColumns.SUBTOTAL to setOf("Subtotal"),
+            CoinbaseCsvColumns.TOTAL to setOf("Total (inclusive of fees and/or spread)", "Total (inclusive of fees)"),
+            CoinbaseCsvColumns.FEES to setOf("Fees and/or Spread", "Fees"),
         )
     }
 }
