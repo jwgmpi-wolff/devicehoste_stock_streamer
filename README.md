@@ -9,14 +9,29 @@ StockStream Local is a private, device-first Android portfolio and quote tracker
 <!-- project-downloads:start -->
 ## APK and installer downloads
 
-| Package | Download | Source |
+Every available project package is indexed below, including older versions. Prefer the newest stable version for your platform and architecture. Debug APKs and prereleases are labeled; archives are not necessarily standalone installers.
+
+### Release downloads: all published versions
+
+| Version / source | Package | Download |
 | --- | --- | --- |
-| Android APK | [StockStreamLocal-release.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.9/StockStreamLocal-release.apk) | v1.0.9 |
+| v1.0.9 | Android APK (debug) | [StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.9/StockStreamLocal-debug.apk) |
+| v1.0.9 | Android APK | [StockStreamLocal-release.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.9/StockStreamLocal-release.apk) |
+| v1.0.8 | Android APK (debug) | [StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.8/StockStreamLocal-debug.apk) |
+| v1.0.7 | Android APK (debug) | [StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.7/StockStreamLocal-debug.apk) |
+| v1.0.6 | Android APK (debug) | [StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.6/StockStreamLocal-debug.apk) |
+| v1.0.5 | Android APK (debug) | [StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.5/StockStreamLocal-debug.apk) |
+| v1.0.4 | Android APK (debug) | [StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.4/StockStreamLocal-debug.apk) |
+| v1.0.3 | Android APK (debug) | [StockStreamLocal-debug.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.3/StockStreamLocal-debug.apk) |
 
-Android may require approval to install apps from this download source. Debug APKs are labeled above. Windows executables that are not setup packages may require accompanying project files; follow the project-specific instructions below.
+### Setup scripts and source
 
-- [Download the complete source ZIP](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/archive/refs/heads/main.zip).
-- [Setup script: scripts/deploy-local.ps1](./scripts/deploy-local.ps1) (download and extract the complete source ZIP first).
+- [Setup script: scripts/deploy-local.ps1](./scripts/deploy-local.ps1)
+
+- [Download the complete source ZIP](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/archive/refs/heads/main.zip). Extract the complete checkout before running setup scripts unless the project instructions explicitly support standalone installation.
+- [Browse all releases and their assets](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases).
+
+Android may require approval to install apps from the download source. Follow the project-specific installation, signing, checksum, and prerequisite instructions elsewhere in this README.
 <!-- project-downloads:end -->
 
 ## Features
