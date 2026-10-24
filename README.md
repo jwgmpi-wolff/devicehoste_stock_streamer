@@ -6,6 +6,19 @@ StockStream Local is a private, device-first Android portfolio and quote tracker
 
 ![StockStream Local on Android](docs/screenshots/stock-stream-local.png)
 
+<!-- project-downloads:start -->
+## APK and installer downloads
+
+| Package | Download | Source |
+| --- | --- | --- |
+| Android APK | [StockStreamLocal-release.apk](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/releases/download/v1.0.9/StockStreamLocal-release.apk) | v1.0.9 |
+
+Android may require approval to install apps from this download source. Debug APKs are labeled above. Windows executables that are not setup packages may require accompanying project files; follow the project-specific instructions below.
+
+- [Download the complete source ZIP](https://github.com/jwgmpi-wolff/devicehoste_stock_streamer/archive/refs/heads/main.zip).
+- [Setup script: scripts/deploy-local.ps1](./scripts/deploy-local.ps1) (download and extract the complete source ZIP first).
+<!-- project-downloads:end -->
+
 ## Features
 
 - Jetpack Compose and Material 3 interface for Android 8.0 and newer.
@@ -231,3 +244,9 @@ Before finishing, run assembleDebug, focused unit tests, and PowerShell syntax v
 ## License
 
 No license has been declared. All rights are reserved unless the repository owner adds a license.
+
+## Copyright
+
+Copyright (c) 2026 Jerry Wolff. See [COPYRIGHT](COPYRIGHT) for the scope of this
+notice. Existing licenses and third-party attribution remain unchanged; this
+notice does not grant additional permissions.
